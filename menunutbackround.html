@@ -1,0 +1,1374 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <title>Stick War - Ultimate</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;}
+    html{width:100%;height:100%;-webkit-tap-highlight-color:transparent;}
+    body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;position:fixed;font-family:'Arial Black',Arial,sans-serif;background:#000;-webkit-user-select:none;user-select:none;transform:translateZ(0);}
+
+    #orientationWarning{display:none;position:fixed;inset:0;background:#000;color:#ffd700;z-index:99999;text-align:center;flex-direction:column;align-items:center;justify-content:center;font-size:24px;text-transform:uppercase;}
+    @media screen and (orientation:portrait){
+      #orientationWarning{display:flex;}
+      #mainBackground,#flashEffect,.screen,#authOverlay{display:none!important;}
+    }
+
+    #mainBackground{position:fixed;inset:0;background-repeat:no-repeat;background-position:center;background-size:cover;z-index:1;transform:translateZ(0);}
+
+    #flashEffect{position:fixed;inset:0;background:#000;z-index:1000;opacity:0;pointer-events:none;display:flex;align-items:center;justify-content:center;gap:40px;will-change:opacity;transition:opacity 0.25s ease-out;}
+    #flashEffect.active{opacity:1;pointer-events:all;}
+    .trans-box{opacity:0;transform:translateY(30px);transition:opacity .3s ease-out .05s,transform .3s ease-out .05s;text-align:left;border-left:4px solid #ffd700;padding:10px 20px;background:rgba(255,255,255,0.05);}
+    #flashEffect.active .trans-box{opacity:1;transform:translateY(0);}
+    .trans-title{color:#ffd700;margin:0;font-size:26px;text-transform:uppercase;font-weight:900;letter-spacing:1px;}
+    .trans-sub{color:#fff;margin:5px 0 0;font-size:14px;opacity:.8;font-weight:normal;}
+
+    #authOverlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(0,0,0,0.96) 0%,rgba(10,15,25,0.99) 100%);}
+    #authOverlay.hidden{display:none;}
+
+    .auth-container{width:92%;max-width:400px;background:linear-gradient(160deg,#0d1117 0%,#161c26 60%,#0a0f1a 100%);border:2px solid rgba(0,210,255,0.35);border-radius:24px;padding:32px 28px 24px;box-shadow:0 0 60px rgba(0,210,255,0.1), 0 30px 80px rgba(0,0,0,0.8);position:relative;overflow:hidden;}
+    .auth-container::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(0,210,255,0.07) 0%,transparent 70%);pointer-events:none;}
+    .auth-logo{text-align:center;margin-bottom:24px;}
+    .auth-logo-title{font-size:clamp(28px,6vw,42px);font-weight:900;background:linear-gradient(135deg,#00d2ff,#ffd700,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px;text-shadow:none;display:block;line-height:1;margin-bottom:6px;}
+    .auth-logo-sub{font-size:11px;color:#556;letter-spacing:3px;text-transform:uppercase;}
+    .auth-tabs{display:flex;gap:4px;background:rgba(255,255,255,0.05);border-radius:12px;padding:4px;margin-bottom:22px;}
+    .auth-tab{flex:1;padding:9px;border-radius:9px;border:none;background:transparent;color:#556;font-size:13px;font-weight:bold;cursor:pointer;transition:all .2s;font-family:'Arial Black',sans-serif;letter-spacing:.5px;}
+    .auth-tab.active{background:rgba(0,210,255,0.15);color:#00d2ff;border:1px solid rgba(0,210,255,0.3);}
+    .auth-form{display:flex;flex-direction:column;gap:12px;}
+    .auth-field{position:relative;}
+    .auth-field-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;z-index:1;}
+    .auth-input{width:100%;padding:13px 14px 13px 42px;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-size:15px;font-family:Arial,sans-serif;outline:none;transition:border-color .2s,background .2s;}
+    .auth-input:focus{border-color:rgba(0,210,255,0.6);background:rgba(0,210,255,0.05);}
+    .auth-input::placeholder{color:#444;}
+    .auth-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:16px;cursor:pointer;color:#445;transition:color .15s;background:none;border:none;padding:0;z-index:1;}
+    .auth-eye:hover{color:#00d2ff;}
+    .auth-btn{width:100%;padding:14px;margin-top:4px;background:linear-gradient(135deg,#0099cc,#00d2ff);border:none;border-radius:12px;color:#000;font-size:15px;font-weight:900;cursor:pointer;transition:all .15s;font-family:'Arial Black',sans-serif;letter-spacing:.5px;box-shadow:0 4px 20px rgba(0,210,255,0.3);}
+    .auth-btn:hover{box-shadow:0 6px 28px rgba(0,210,255,0.5);transform:translateY(-1px);}
+    .auth-btn:active{transform:scale(0.97);}
+    .auth-btn:disabled{opacity:.6;cursor:not-allowed;}
+    .auth-msg{font-size:12px;text-align:center;padding:8px 12px;border-radius:8px;display:none;}
+    .auth-msg.error{background:rgba(231,76,60,0.15);border:1px solid rgba(231,76,60,0.35);color:#e74c3c;}
+    .auth-msg.success{background:rgba(46,204,113,0.15);border:1px solid rgba(46,204,113,0.35);color:#2ecc71;}
+    .auth-msg.show{display:block;}
+    .auth-strength{display:none;gap:4px;margin-top:-4px;}
+    .auth-strength.show{display:flex;}
+    .str-bar{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.07);transition:background .3s;}
+    .str-label{font-size:10px;color:#556;margin-left:4px;white-space:nowrap;line-height:14px;}
+    .auth-footer{text-align:center;margin-top:16px;font-size:11px;color:#334;}
+    .auth-footer a{color:#00d2ff;cursor:pointer;text-decoration:none;}
+    .auth-footer a:hover{text-decoration:underline;}
+
+    .screen{position:absolute;inset:0;display:none;z-index:10;color:#fff;}
+    .screen.active{display:block;}
+
+    #coinBar{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;z-index:25;background:rgba(0,0,0,0.85);border:2px solid rgba(255,215,0,0.55);border-radius:28px;padding:7px 20px;box-shadow:0 0 18px rgba(255,215,0,0.18);}
+    .cb-item{display:flex;align-items:center;gap:5px;font-size:15px;font-weight:bold;cursor:pointer;transition:opacity .15s;}
+    .cb-item:hover{opacity:0.8;}
+    .cb-icon{font-size:17px;}
+    .cb-val{color:#f1c40f;min-width:36px;text-align:center;transition:color .2s;}
+    .cb-sep{width:1px;height:22px;background:rgba(255,255,255,0.15);}
+
+    #profileCard{position:absolute;top:12px;left:12px;z-index:25;display:flex;align-items:center;gap:0;cursor:pointer;filter:drop-shadow(0 3px 10px rgba(0,0,0,0.7));}
+    .pc-avatar-wrap{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#c8aa6e,#f1c40f,#e74c3c);padding:3px;flex-shrink:0;position:relative;box-shadow:0 0 0 2px #000, 0 0 14px rgba(200,170,110,0.6);}
+    .pc-avatar-inner{width:100%;height:100%;border-radius:50%;background:linear-gradient(145deg,#1a2332,#0d1117);display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden;position:relative;}
+    .pc-online{position:absolute;bottom:2px;right:2px;width:13px;height:13px;border-radius:50%;background:#2ecc71;border:2px solid #000;box-shadow:0 0 6px #2ecc71;}
+    .pc-lvl-badge{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#c8aa6e,#f1c40f);color:#000;font-size:9px;font-weight:900;padding:1px 7px;border-radius:8px;white-space:nowrap;border:1.5px solid #000;letter-spacing:.5px;}
+    .pc-info{background:rgba(0,0,0,0.9);border:1.5px solid rgba(200,170,110,0.45);border-left:none;border-radius:0 14px 14px 0;padding:8px 14px 8px 10px;min-width:140px;}
+    .pc-name{font-size:14px;font-weight:900;color:#fff;letter-spacing:.5px;margin-bottom:3px;text-shadow:0 1px 4px #000;}
+    .pc-rank-row{display:flex;align-items:center;gap:5px;margin-bottom:5px;}
+    .pc-rank-icon{font-size:13px;}
+    .pc-rank-text{font-size:11px;color:#c8aa6e;font-weight:bold;}
+    .pc-tag{font-size:9px;background:rgba(200,170,110,0.2);border:1px solid rgba(200,170,110,0.4);color:#c8aa6e;padding:1px 5px;border-radius:4px;}
+    .pc-xp-row{display:flex;align-items:center;gap:5px;}
+    .pc-xp-bar-wrap{flex:1;height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;}
+    .pc-xp-bar{height:100%;background:linear-gradient(90deg,#c8aa6e,#f1c40f);border-radius:3px;transition:width .4s ease;width:0%;}
+    .pc-xp-txt{font-size:9px;color:#888;white-space:nowrap;}
+    #profileCard:hover .pc-info{border-color:rgba(200,170,110,0.8);}
+    #profileCard:active{transform:scale(0.97);}
+
+    #logoutBtn{position:absolute;bottom:12px;right:12px;z-index:25;background:rgba(40,10,8,0.85);border:1.5px solid rgba(231,76,60,0.4);color:#e74c3c;border-radius:10px;padding:7px 14px;font-size:12px;font-weight:bold;cursor:pointer;transition:all .15s;font-family:'Arial Black',sans-serif;}
+    #logoutBtn:hover{background:rgba(231,76,60,0.3);}
+    #logoutBtn:active{transform:scale(0.95);}
+
+    #profileModal{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:200;display:none;align-items:center;justify-content:center;}
+    #profileModal.show{display:flex;}
+    .pm-panel{width:90%;max-width:480px;max-height:92vh;overflow-y:auto;background:linear-gradient(160deg,#0d1117 0%,#161c26 60%,#0d1117 100%);border:2px solid rgba(200,170,110,0.4);border-radius:20px;padding:22px 20px 20px;box-shadow:0 0 60px rgba(200,170,110,0.12),0 20px 60px rgba(0,0,0,0.7);position:relative;}
+    .pm-panel::-webkit-scrollbar{width:4px;}
+    .pm-panel::-webkit-scrollbar-thumb{background:#c8aa6e44;border-radius:4px;}
+    .pm-close{position:absolute;top:14px;right:14px;width:30px;height:30px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+    .pm-close:hover{background:rgba(231,76,60,0.3);color:#fff;}
+    .pm-hero{display:flex;align-items:center;gap:16px;margin-bottom:18px;}
+    .pm-avatar-big{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#c8aa6e,#f1c40f,#e74c3c);padding:3px;flex-shrink:0;box-shadow:0 0 24px rgba(200,170,110,0.5);}
+    .pm-avatar-inner{width:100%;height:100%;border-radius:50%;background:linear-gradient(145deg,#1a2332,#0d1117);display:flex;align-items:center;justify-content:center;font-size:36px;}
+    .pm-hero-info{flex:1;}
+    .pm-hero-name{font-size:20px;font-weight:900;color:#fff;margin:0 0 3px;letter-spacing:.5px;}
+    .pm-hero-id{font-size:11px;color:#555;margin-bottom:6px;}
+    .pm-hero-user{font-size:11px;color:#00d2ff;margin-bottom:6px;}
+    .pm-badges-row{display:flex;gap:5px;flex-wrap:wrap;}
+    .pm-badge{font-size:9px;padding:2px 7px;border-radius:6px;font-weight:bold;letter-spacing:.3px;}
+    .pm-badge.gold{background:rgba(241,196,15,0.18);border:1px solid rgba(241,196,15,0.5);color:#f1c40f;}
+    .pm-badge.blue{background:rgba(52,152,219,0.18);border:1px solid rgba(52,152,219,0.5);color:#3498db;}
+    .pm-badge.red{background:rgba(231,76,60,0.18);border:1px solid rgba(231,76,60,0.5);color:#e74c3c;}
+    .pm-badge.purple{background:rgba(155,89,182,0.18);border:1px solid rgba(155,89,182,0.5);color:#a29bfe;}
+    .pm-rank-card{background:rgba(255,255,255,0.04);border:1.5px solid rgba(200,170,110,0.25);border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:14px;}
+    .pm-rank-icon-big{font-size:44px;line-height:1;filter:drop-shadow(0 0 8px rgba(200,170,110,0.5));}
+    .pm-rank-detail{flex:1;}
+    .pm-rank-name{font-size:16px;font-weight:900;color:#c8aa6e;margin-bottom:2px;}
+    .pm-rank-sub{font-size:11px;color:#555;margin-bottom:8px;}
+    .pm-rank-prog-wrap{height:8px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;margin-bottom:4px;}
+    .pm-rank-prog{height:100%;border-radius:4px;background:linear-gradient(90deg,#c8aa6e,#f1c40f);transition:width .5s ease;}
+    .pm-rank-pts{font-size:10px;color:#888;}
+    .pm-section-title{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#555;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);}
+    .pm-stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+    .pm-stat-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:11px;padding:10px 8px;text-align:center;transition:border-color .2s;}
+    .pm-stat-box:hover{border-color:rgba(200,170,110,0.4);}
+    .pm-stat-icon{font-size:18px;margin-bottom:4px;}
+    .pm-stat-val{font-size:17px;font-weight:900;color:#fff;margin-bottom:2px;font-family:'Arial Black',sans-serif;}
+    .pm-stat-val.gold{color:#f1c40f;}.pm-stat-val.red{color:#e74c3c;}.pm-stat-val.green{color:#2ecc71;}.pm-stat-val.blue{color:#3498db;}.pm-stat-val.purple{color:#a29bfe;}
+    .pm-stat-lbl{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.5px;}
+    .pm-ach-grid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+    .pm-ach{width:52px;text-align:center;}
+    .pm-ach-icon{width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 3px;transition:all .15px;}
+    .pm-ach.unlocked .pm-ach-icon{border-color:rgba(200,170,110,0.6);background:rgba(200,170,110,0.1);box-shadow:0 0 10px rgba(200,170,110,0.2);}
+    .pm-ach.locked .pm-ach-icon{filter:grayscale(1);opacity:.35;}
+    .pm-ach-lbl{font-size:8px;color:#666;line-height:1.2;}
+    .pm-ach.unlocked .pm-ach-lbl{color:#c8aa6e;}
+    .pm-history{margin-bottom:14px;}
+    .pm-hist-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+    .pm-hist-row:last-child{border-bottom:none;}
+    .pm-hist-result{width:34px;height:22px;border-radius:5px;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .pm-hist-result.win{background:rgba(46,204,113,0.25);color:#2ecc71;border:1px solid rgba(46,204,113,0.4);}
+    .pm-hist-result.loss{background:rgba(231,76,60,0.2);color:#e74c3c;border:1px solid rgba(231,76,60,0.35);}
+    .pm-hist-info{flex:1;font-size:11px;color:#aaa;}
+    .pm-hist-info strong{color:#fff;}
+    .pm-hist-meta{font-size:10px;color:#555;text-align:right;}
+    .pm-edit-btn{width:100%;padding:11px;border-radius:11px;border:1.5px solid rgba(200,170,110,0.4);background:rgba(200,170,110,0.08);color:#c8aa6e;font-size:13px;font-weight:bold;cursor:pointer;letter-spacing:.5px;transition:all .15s;font-family:'Arial Black',sans-serif;}
+    .pm-edit-btn:hover{background:rgba(200,170,110,0.16);border-color:rgba(200,170,110,0.7);}
+    .pm-edit-btn:active{transform:scale(0.97);}
+
+    .menu-content{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;position:relative;gap:3vh;}
+    .title-text{margin:0;font-size:clamp(28px,7vw,60px);font-weight:900;text-shadow:0 0 20px rgba(0,210,255,0.8),4px 4px #000;z-index:20;}
+    .menu-btn-group{display:flex;flex-direction:column;align-items:center;gap:4px;z-index:20;}
+    .menu-btn{width:min(260px,68vw);height:min(65px,17vw);background-size:100% 100%;background-repeat:no-repeat;background-position:center;margin:6px;cursor:pointer;transition:transform .08s ease-out;image-rendering:pixelated;will-change:transform;transform:translateZ(0);user-select:none;}
+    .menu-btn:active{transform:scale(0.95);}
+    .play-btn{background-image:url("https://assets.dcoder.tech/69ce071c4aee5c76848752cd/69d213de4aee5c7684878de1/1775391526996.png");}
+    .shop-btn{background-image:url("https://assets.dcoder.tech/69ce071c4aee5c76848752cd/69d213de4aee5c7684878de1/1775391643889.png");}
+    .settings-btn{background-image:url("https://assets.dcoder.tech/69ce071c4aee5c76848752cd/69ce07db4aee5c76848752d4/1775393210366.png");}
+    .btn-back{width:150px;height:60px;background-image:url("https://assets.dcoder.tech/69ce071c4aee5c76848752cd/69d213de4aee5c7684878de1/1775392540611.png");background-size:100% 100%;background-repeat:no-repeat;background-position:center;cursor:pointer;z-index:25;transition:transform .08s ease-out;image-rendering:pixelated;will-change:transform;transform:translateZ(0);user-select:none;}
+    .btn-back:active{transform:scale(0.9);}
+
+    #rewardNotif{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:linear-gradient(135deg,#0d1117,#1a2332);border:3px solid #ffd700;border-radius:20px;padding:22px 30px;text-align:center;z-index:500;transition:transform 0.22s cubic-bezier(.34,1.56,.64,1);min-width:280px;will-change:transform;}
+    #rewardNotif.show{transform:translate(-50%,-50%) scale(1);}
+    #rewardNotif h2{color:#ffd700;margin:0 0 10px;font-size:22px;}
+    .reward-coins{font-size:36px;font-weight:900;color:#f1c40f;margin:10px 0;text-shadow:0 0 20px rgba(241,196,15,.8);}
+    .reward-row{display:flex;justify-content:center;gap:20px;margin:8px 0;}
+    .reward-item{text-align:center;}
+    .reward-item .r-icon{font-size:26px;}
+    .reward-item .r-val{font-size:20px;font-weight:bold;color:#f1c40f;}
+    .reward-item .r-label{font-size:11px;color:#888;}
+    .btn-claim{background:linear-gradient(135deg,#f1c40f,#e67e22);color:#000;border:none;padding:12px 30px;font-size:16px;font-weight:bold;border-radius:10px;cursor:pointer;margin-top:15px;width:100%;font-family:'Arial Black',sans-serif;}
+    .btn-claim:active{transform:scale(.96);}
+
+    /* ══ SETTINGS ══ */
+    #settingsScreen{
+      background:#0c0a06;
+      background-image:
+        radial-gradient(ellipse 120% 60% at 50% 0%,rgba(200,169,110,0.06) 0%,transparent 60%),
+        radial-gradient(ellipse 80% 40% at 50% 100%,rgba(139,34,34,0.04) 0%,transparent 60%),
+        repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(200,169,110,0.025) 39px,rgba(200,169,110,0.025) 40px),
+        repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(200,169,110,0.015) 39px,rgba(200,169,110,0.015) 40px);
+    }
+    .settings-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:0 6px;position:relative;z-index:2;}
+    .scroll-panel{width:100%;max-width:760px;height:97vh;max-height:97vh;position:relative;}
+    .scroll-panel::before,.scroll-panel::after{content:'';position:absolute;width:28px;height:28px;border-color:#c8a96e;border-style:solid;opacity:0.7;z-index:10;pointer-events:none;}
+    .scroll-panel::before{top:-1px;left:-1px;border-width:3px 0 0 3px;border-radius:3px 0 0 0;}
+    .scroll-panel::after{bottom:-1px;right:-1px;border-width:0 3px 3px 0;border-radius:0 0 3px 0;}
+    .scroll-corner-tr,.scroll-corner-bl{position:absolute;width:28px;height:28px;border-color:#c8a96e;border-style:solid;opacity:0.7;z-index:10;pointer-events:none;}
+    .scroll-corner-tr{top:-1px;right:-1px;border-width:3px 3px 0 0;border-radius:0 3px 0 0;}
+    .scroll-corner-bl{bottom:-1px;left:-1px;border-width:0 0 3px 3px;border-radius:0 0 0 3px;}
+    .scroll-inner{background:linear-gradient(170deg,#14100a 0%,#1c1408 30%,#120e08 70%,#0e0b06 100%);border:1.5px solid rgba(200,169,110,0.3);border-radius:4px;overflow:hidden;display:flex;flex-direction:column;height:100%;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),inset 0 -1px 0 rgba(0,0,0,0.4),0 8px 40px rgba(0,0,0,0.7),0 0 60px rgba(200,169,110,0.04);}
+    .settings-header{padding:8px 24px 7px;background:linear-gradient(135deg,#1e1608 0%,#2a1e0c 50%,#1a1206 100%);border-bottom:1px solid rgba(200,169,110,0.2);display:flex;align-items:center;justify-content:center;gap:14px;position:relative;}
+    .settings-header::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(200,169,110,0.5),transparent);}
+    .hdr-rune{font-size:14px;opacity:0.5;flex-shrink:0;}
+    .settings-title-text{font-size:clamp(12px,2.2vw,15px);font-weight:900;letter-spacing:3px;text-transform:uppercase;background:linear-gradient(180deg,#e8d5a3 0%,#c8a96e 40%,#9a7840 80%,#c8a96e 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));}
+    .settings-body-scroll{flex:1;overflow-y:auto;padding:0 20px 16px;scrollbar-width:thin;scrollbar-color:rgba(200,169,110,0.3) transparent;}
+    .settings-body-scroll::-webkit-scrollbar{width:3px;}
+    .settings-body-scroll::-webkit-scrollbar-thumb{background:rgba(200,169,110,0.3);border-radius:3px;}
+    .settings-section{padding:14px 0 0;}
+    .section-label{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:rgba(200,169,110,0.45);padding:0 0 8px;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+    .section-label::before,.section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(200,169,110,0.2),transparent);}
+    .s-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;margin-bottom:5px;border-radius:3px;background:rgba(255,255,255,0.02);border:1px solid transparent;border-bottom-color:rgba(200,169,110,0.07);transition:background 0.15s,border-color 0.15s;min-height:44px;}
+    .s-row:hover{background:rgba(200,169,110,0.04);border-color:rgba(200,169,110,0.12);}
+    .s-row:last-child{border-bottom-color:transparent;}
+    .s-label{display:flex;align-items:center;gap:9px;font-size:13px;color:#c8a96e;font-weight:bold;letter-spacing:0.5px;}
+    .s-icon{font-size:15px;width:22px;text-align:center;flex-shrink:0;}
+    .s-label-text{color:#d4bc8a;font-size:12px;}
+    .toggle-btn{position:relative;min-width:100px;padding:7px 16px;background:linear-gradient(135deg,#1e1608,#2a1e0c);border:1px solid rgba(200,169,110,0.35);border-radius:2px;color:#c8a96e;font-size:11px;font-weight:900;font-family:'Arial Black',sans-serif;letter-spacing:1px;cursor:pointer;transition:border-color .15s,color .15s;text-align:center;white-space:nowrap;}
+    .toggle-btn::before{content:'';position:absolute;inset:0;border-radius:2px;background:linear-gradient(180deg,rgba(255,255,255,0.04) 0%,transparent 50%);pointer-events:none;}
+    .toggle-btn:hover{border-color:rgba(200,169,110,0.65);background:linear-gradient(135deg,#241a08,#322208);color:#e8d5a3;}
+    .toggle-btn:active{transform:scale(0.96);}
+    .toggle-btn.on{border-color:rgba(74,124,89,0.6);color:#6dbf85;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 0 8px rgba(74,124,89,0.2);}
+    .toggle-btn.off{border-color:rgba(139,34,34,0.45);color:rgba(200,169,110,0.35);}
+    .slider-wrap{display:flex;align-items:center;gap:8px;}
+    .s-slider{-webkit-appearance:none;appearance:none;width:90px;height:4px;border-radius:0;outline:none;cursor:pointer;background:linear-gradient(90deg,#c8a96e var(--val,20%),rgba(255,255,255,0.06) var(--val,20%));border:1px solid rgba(200,169,110,0.15);box-shadow:inset 0 1px 2px rgba(0,0,0,0.5);}
+    .s-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:1px;background:linear-gradient(135deg,#e8d5a3,#c8a96e,#9a7840);border:1px solid rgba(0,0,0,0.5);box-shadow:0 1px 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.2);cursor:pointer;transform:rotate(45deg);}
+    .s-slider::-moz-range-thumb{width:14px;height:14px;border-radius:1px;background:linear-gradient(135deg,#e8d5a3,#c8a96e,#9a7840);border:1px solid rgba(0,0,0,0.5);cursor:pointer;transform:rotate(45deg);}
+    .slider-val{font-size:11px;color:#c8a96e;min-width:34px;text-align:right;font-family:'Courier New',monospace;font-weight:bold;}
+    .stats-tablet{margin-top:4px;padding:12px 0 4px;}
+    .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+    .stat-stone{background:linear-gradient(135deg,rgba(255,255,255,0.025),rgba(255,255,255,0.01));border:1px solid rgba(200,169,110,0.1);border-radius:2px;padding:8px 6px;text-align:center;position:relative;overflow:hidden;}
+    .stat-stone::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(200,169,110,0.2),transparent);}
+    .stat-stone-val{font-size:18px;font-weight:900;font-family:'Courier New',monospace;color:#6dbf85;line-height:1;margin-bottom:3px;letter-spacing:-1px;}
+    .stat-stone-val.amber{color:#c8a96e;}
+    .stat-stone-val.crimson{color:#cd4444;}
+    .stat-stone-lbl{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(200,169,110,0.35);}
+    .settings-footer{padding:10px 20px 11px;background:linear-gradient(135deg,#100c06,#1c1408);border-top:1px solid rgba(200,169,110,0.15);display:flex;justify-content:center;position:relative;}
+    .settings-footer::before{content:'';position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(200,169,110,0.3),transparent);}
+    .back-stone-btn{display:flex;align-items:center;gap:6px;padding:7px 18px;background:linear-gradient(135deg,#1e1608,#2c1e0a);border:1px solid rgba(200,169,110,0.4);border-radius:2px;color:#c8a96e;font-size:10px;font-weight:900;font-family:'Arial Black',sans-serif;letter-spacing:1.5px;cursor:pointer;transition:all 0.12s;box-shadow:inset 0 1px 0 rgba(255,255,255,0.05),0 3px 8px rgba(0,0,0,0.5);position:relative;overflow:hidden;}
+    .back-stone-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0.04) 0%,transparent 50%);pointer-events:none;}
+    .back-stone-btn:hover{border-color:rgba(200,169,110,0.7);background:linear-gradient(135deg,#241a08,#341e08);color:#e8d5a3;}
+    .back-stone-btn:active{transform:scale(0.96);}
+    @keyframes ambientPulse{0%,100%{opacity:0.4;}50%{opacity:0.7;}}
+    .ambient-glow{position:absolute;border-radius:50%;pointer-events:none;}
+    .glow-top{top:-80px;left:50%;transform:translateX(-50%);width:300px;height:160px;background:radial-gradient(ellipse,rgba(200,169,110,0.06) 0%,transparent 70%);opacity:.55;}
+    .glow-bot{bottom:-80px;left:50%;transform:translateX(-50%);width:200px;height:120px;background:radial-gradient(ellipse,rgba(139,34,34,0.05) 0%,transparent 70%);opacity:.55;}
+    .s-row-btn{cursor:pointer;user-select:none;}
+    .s-row-btn:active{transform:scale(0.98);}
+    .s-row-danger:hover{background:rgba(139,34,34,0.08)!important;border-color:rgba(139,34,34,0.2)!important;}
+    .s-static-val{font-size:11px;color:rgba(200,169,110,0.6);font-family:'Courier New',monospace;display:flex;align-items:center;gap:6px;}
+    .s-badge-new{font-size:8px;background:rgba(200,169,110,0.15);border:1px solid rgba(200,169,110,0.35);color:#c8a96e;padding:1px 5px;border-radius:2px;letter-spacing:1px;font-family:'Arial Black',sans-serif;}
+    .s-arrow{font-size:18px;color:rgba(200,169,110,0.35);line-height:1;transition:color 0.15s;}
+    .s-row-btn:hover .s-arrow{color:rgba(200,169,110,0.75);}
+    .s-coming{font-size:8px;background:rgba(241,196,15,0.12);border:1px solid rgba(241,196,15,0.3);color:#d4a017;padding:2px 6px;border-radius:2px;letter-spacing:1px;font-family:'Arial Black',sans-serif;}
+    .credits-tablet{background:linear-gradient(135deg,rgba(255,255,255,0.02),rgba(255,255,255,0.005));border:1px solid rgba(200,169,110,0.12);border-radius:2px;padding:2px 0;margin-top:4px;overflow:hidden;}
+    .credit-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;}
+    .credit-role{font-size:11px;color:rgba(200,169,110,0.45);letter-spacing:0.5px;text-transform:uppercase;}
+    .credit-name{font-size:13px;font-weight:900;color:#d4bc8a;font-family:'Arial Black',sans-serif;letter-spacing:0.5px;}
+    .credit-aka{font-size:10px;color:rgba(200,169,110,0.4);font-weight:normal;font-family:Arial,sans-serif;letter-spacing:0;}
+    .credit-divider{height:1px;margin:0 14px;background:linear-gradient(90deg,transparent,rgba(200,169,110,0.12),transparent);}
+    .credits-footer-line{text-align:center;font-size:9px;color:rgba(200,169,110,0.25);letter-spacing:2px;padding:10px 14px 8px;border-top:1px solid rgba(200,169,110,0.07);margin-top:2px;}
+
+    /* Change Password Modal */
+    #changePwModal{position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:400;display:none;align-items:center;justify-content:center;}
+    #changePwModal.show{display:flex;}
+    .cpw-box{width:88%;max-width:340px;background:linear-gradient(160deg,#14100a,#1e1608);border:1.5px solid rgba(200,169,110,0.4);border-radius:4px;overflow:hidden;box-shadow:0 0 40px rgba(200,169,110,0.08),0 20px 50px rgba(0,0,0,0.7);position:relative;}
+    .cpw-header{padding:14px 18px 12px;background:linear-gradient(135deg,#1e1608,#2a1e0c);border-bottom:1px solid rgba(200,169,110,0.18);display:flex;align-items:center;justify-content:space-between;}
+    .cpw-title{font-size:13px;font-weight:900;letter-spacing:2px;background:linear-gradient(180deg,#e8d5a3,#c8a96e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .cpw-close{width:26px;height:26px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:2px;color:#888;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;}
+    .cpw-close:hover{background:rgba(139,34,34,0.3);color:#fff;}
+    .cpw-body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:10px;}
+    .cpw-field{position:relative;}
+    .cpw-field-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;z-index:1;}
+    .cpw-input{width:100%;padding:11px 12px 11px 38px;background:rgba(255,255,255,0.04);border:1px solid rgba(200,169,110,0.2);border-radius:2px;color:#d4bc8a;font-size:13px;font-family:Arial,sans-serif;outline:none;transition:border-color 0.15s,background 0.15s;}
+    .cpw-input:focus{border-color:rgba(200,169,110,0.6);background:rgba(200,169,110,0.03);}
+    .cpw-input::placeholder{color:rgba(200,169,110,0.2);}
+    .cpw-msg{font-size:11px;padding:7px 10px;border-radius:2px;display:none;text-align:center;}
+    .cpw-msg.error{background:rgba(139,34,34,0.15);border:1px solid rgba(139,34,34,0.35);color:#cd6464;display:block;}
+    .cpw-msg.success{background:rgba(74,124,89,0.15);border:1px solid rgba(74,124,89,0.35);color:#6dbf85;display:block;}
+    .cpw-btn{padding:11px;border-radius:2px;border:1px solid rgba(200,169,110,0.4);background:linear-gradient(135deg,#1e1608,#2c1e0a);color:#c8a96e;font-size:12px;font-weight:900;font-family:'Arial Black',sans-serif;letter-spacing:1.5px;cursor:pointer;transition:all 0.12s;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);}
+    .cpw-btn:hover{border-color:rgba(200,169,110,0.7);color:#e8d5a3;background:linear-gradient(135deg,#241a08,#341e08);}
+    .cpw-btn:active{transform:scale(0.97);}
+
+    /* Terms Modal */
+    #termsModal{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:400;display:none;align-items:center;justify-content:center;}
+    #termsModal.show{display:flex;}
+    .terms-box{width:90%;max-width:500px;max-height:88vh;background:linear-gradient(160deg,#14100a,#1e1608,#14100a);border:1.5px solid rgba(200,169,110,0.35);border-radius:4px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 60px rgba(200,169,110,0.07),0 20px 60px rgba(0,0,0,0.8);}
+    .terms-header{padding:14px 18px 12px;background:linear-gradient(135deg,#1e1608,#2a1e0c);border-bottom:1px solid rgba(200,169,110,0.15);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+    .terms-title{font-size:12px;font-weight:900;letter-spacing:2.5px;background:linear-gradient(180deg,#e8d5a3,#c8a96e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .terms-close{width:26px;height:26px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:2px;color:#888;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;}
+    .terms-close:hover{background:rgba(139,34,34,0.3);color:#fff;}
+    .terms-scroll{overflow-y:auto;padding:16px 18px 20px;scrollbar-width:thin;scrollbar-color:rgba(200,169,110,0.2) transparent;flex:1;}
+    .terms-scroll::-webkit-scrollbar{width:3px;}
+    .terms-scroll::-webkit-scrollbar-thumb{background:rgba(200,169,110,0.2);border-radius:3px;}
+    .terms-art{text-align:center;font-size:22px;color:rgba(200,169,110,0.25);letter-spacing:8px;margin-bottom:14px;line-height:1;}
+    .terms-h1{font-size:10px;font-weight:900;letter-spacing:2.5px;text-transform:uppercase;color:rgba(200,169,110,0.55);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(200,169,110,0.1);}
+    .terms-h1:first-of-type{margin-top:0;}
+    .terms-p{font-size:11.5px;line-height:1.7;color:rgba(212,188,138,0.55);margin:0 0 8px;}
+    .terms-p b{color:rgba(212,188,138,0.8);}
+    .terms-rule{text-align:center;font-size:10px;color:rgba(200,169,110,0.2);letter-spacing:4px;margin:12px 0;}
+
+    /* MAP */
+    .level-info{position:absolute;top:20px;right:20px;text-align:right;font-size:20px;text-shadow:2px 2px #000;z-index:20;color:#fff;}
+    .btn-back-map{position:absolute;bottom:10px;left:10px;}
+    .node{position:absolute;width:130px;height:130px;background-size:contain;background-repeat:no-repeat;background-position:center;image-rendering:pixelated;z-index:15;pointer-events:none;will-change:transform;transform:translateZ(0);}
+    .node::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;cursor:pointer;pointer-events:auto;}
+    @keyframes floatUpDown{0%,100%{transform:translateY(0);}50%{transform:translateY(-12px);}}
+    .node-1{bottom:18%;right:10%;background-image:url("https://assets.dcoder.tech/69ce071c4aee5c76848752cd/69ce81994aee5c7684875a0c/1775169964626.png");animation:floatUpDown 3s ease-in-out infinite;filter:drop-shadow(0 0 6px rgba(0,255,0,.6));}
+    .node-2{bottom:25%;left:60%;background-image:url("https://assets.dcoder.tech/69ce071c4aee5c76848752cd/69ce09414aee5c76848752ee/1775140934974.png");animation:floatUpDown 3s ease-in-out .5s infinite;filter:drop-shadow(0 0 6px rgba(255,255,0,.6));}
+    .node-3{top:32%;left:45%;background-image:url("https://assets.dcoder.tech/69ce071c4aee5c76848752cd/69ce09dc4aee5c76848752f5/1775141067036.png");animation:floatUpDown 3s ease-in-out 1s infinite;filter:drop-shadow(0 0 6px rgba(255,0,0,.6));}
+    #previewBox{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);width:280px;background:rgba(0,0,0,.95);border:3px solid #ffd700;border-radius:15px;padding:15px;text-align:center;transition:transform .2s cubic-bezier(.34,1.56,.64,1);z-index:30;}
+    #previewBox.show{transform:translate(-50%,-50%) scale(1);}
+    .preview-reward{color:#aaa;font-size:12px;margin:8px 0;}
+    .preview-reward span{color:#f1c40f;font-weight:bold;}
+    .btn-play{background:#e67e22;color:#fff;border:none;padding:10px;font-size:16px;font-weight:bold;border-radius:5px;cursor:pointer;width:100%;margin-top:10px;font-family:'Arial Black',sans-serif;}
+    .btn-play:active{transform:scale(.96);}
+
+    #toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-60px);background:#1a2332;border:1.5px solid rgba(0,210,255,0.5);color:#fff;padding:10px 22px;border-radius:50px;z-index:9999;font-size:13px;font-weight:bold;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,0.5);}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+    #toast.success{border-color:rgba(46,204,113,0.6);color:#2ecc71;}
+    #toast.error{border-color:rgba(231,76,60,0.6);color:#e74c3c;}
+    #toast.warn{border-color:rgba(241,196,15,0.6);color:#f1c40f;}
+
+    #fpsOverlay{position:fixed;bottom:6px;right:8px;z-index:9999;color:#0f0;font-size:10px;font-family:'Courier New',monospace;background:rgba(0,0,0,.7);padding:2px 6px;border-radius:3px;border:1px solid #0f052;pointer-events:none;}
+
+    #nameModal{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:300;display:none;align-items:center;justify-content:center;}
+    #nameModal.show{display:flex;}
+    .nm-box{background:linear-gradient(135deg,#0d1117,#161c26);border:2px solid rgba(200,170,110,.5);border-radius:18px;padding:24px 24px 20px;width:88%;max-width:340px;text-align:center;}
+    .nm-box h3{color:#c8aa6e;margin:0 0 14px;font-size:17px;}
+    .nm-input{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(200,170,110,.4);border-radius:10px;padding:10px 14px;color:#fff;font-size:16px;font-family:'Arial Black',sans-serif;outline:none;margin-bottom:12px;}
+    .nm-input:focus{border-color:rgba(200,170,110,.9);}
+    .nm-btn{width:100%;padding:11px;border-radius:10px;background:linear-gradient(135deg,#c8aa6e,#a07840);color:#000;border:none;font-size:14px;font-weight:bold;cursor:pointer;font-family:'Arial Black',sans-serif;margin-bottom:7px;}
+    .nm-btn:active{transform:scale(.97);}
+    .nm-cancel{color:#555;font-size:12px;cursor:pointer;}
+    .nm-cancel:hover{color:#aaa;}
+    .av-grid{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:14px;}
+    .av-opt{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;transition:all .12s;}
+    .av-opt:hover,.av-opt.selected{border-color:#c8aa6e;background:rgba(200,170,110,.15);transform:scale(1.08);}
+
+    #adminPage{position:fixed;inset:0;background:#0a0f1a;z-index:9998;display:none;flex-direction:column;padding:0;overflow:hidden;}
+    #adminPage.show{display:flex;}
+    .adm-header{background:linear-gradient(135deg,#0d1117,#1a0d00);border-bottom:2px solid #ffd700;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+    .adm-header h2{color:#ffd700;margin:0;font-size:18px;letter-spacing:1px;}
+    .adm-header-right{display:flex;gap:8px;align-items:center;}
+    .adm-badge{background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.4);color:#ffd700;font-size:10px;padding:3px 10px;border-radius:10px;font-weight:bold;}
+    .btn-close-admin{background:rgba(231,76,60,0.2);color:#e74c3c;padding:8px 16px;border-radius:8px;cursor:pointer;border:1.5px solid rgba(231,76,60,0.5);font-weight:bold;font-family:'Arial Black',sans-serif;font-size:12px;transition:all .15s;}
+    .btn-close-admin:hover{background:rgba(231,76,60,0.4);}
+    .adm-toolbar{padding:12px 20px;display:flex;gap:10px;align-items:center;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;flex-wrap:wrap;}
+    .adm-search{flex:1;min-width:160px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;color:#fff;font-size:13px;outline:none;}
+    .adm-search:focus{border-color:rgba(0,210,255,0.5);}
+    .adm-count{font-size:12px;color:#556;white-space:nowrap;}
+    .adm-btn-danger{background:rgba(231,76,60,0.15);border:1px solid rgba(231,76,60,0.4);color:#e74c3c;padding:7px 12px;border-radius:7px;font-size:12px;font-weight:bold;cursor:pointer;font-family:'Arial Black',sans-serif;transition:all .15s;}
+    .adm-btn-danger:hover{background:rgba(231,76,60,0.3);}
+    .adm-body{flex:1;overflow-y:auto;padding:16px 20px;}
+    .adm-body::-webkit-scrollbar{width:4px;}
+    .adm-body::-webkit-scrollbar-thumb{background:#ffd70044;border-radius:4px;}
+    .player-card{background:linear-gradient(135deg,#111827,#0d1520);border:1px solid rgba(255,255,255,0.08);border-left:4px solid #00d2ff;border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;transition:border-left-color .2s;}
+    .player-card:hover{border-left-color:#ffd700;}
+    .player-card-avatar{font-size:28px;width:40px;text-align:center;flex-shrink:0;}
+    .player-card-info{flex:1;min-width:0;}
+    .player-card-name{font-size:14px;font-weight:bold;color:#fff;margin-bottom:2px;}
+    .player-card-user{font-size:11px;color:#00d2ff;margin-bottom:4px;}
+    .player-card-stats{font-size:11px;color:#556;display:flex;gap:10px;flex-wrap:wrap;}
+    .player-card-stats span{color:#778;}
+    .player-card-stats b{color:#aaa;}
+    .player-card-actions{display:flex;flex-direction:column;gap:5px;flex-shrink:0;}
+    .adm-action-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:bold;cursor:pointer;font-family:'Arial Black',sans-serif;border:none;transition:all .15s;}
+    .adm-action-btn.gold-btn{background:rgba(255,215,0,0.15);color:#ffd700;border:1px solid rgba(255,215,0,0.4);}
+    .adm-action-btn.gold-btn:hover{background:rgba(255,215,0,0.3);}
+    .adm-action-btn.red-btn{background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.4);}
+    .adm-action-btn.red-btn:hover{background:rgba(231,76,60,0.3);}
+
+    #adminCoinEdit{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:none;align-items:center;justify-content:center;}
+    #adminCoinEdit.show{display:flex;}
+    .ace-box{background:#0d1117;border:2px solid #ffd700;border-radius:16px;padding:22px;width:280px;text-align:center;}
+    .ace-box h3{color:#ffd700;margin:0 0 14px;font-size:16px;}
+    .ace-input{width:100%;background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,215,0,0.4);border-radius:10px;padding:10px;color:#fff;font-size:18px;text-align:center;font-family:'Arial Black',sans-serif;outline:none;margin-bottom:12px;}
+    .ace-row{display:flex;gap:8px;}
+    .ace-btn{flex:1;padding:10px;border-radius:9px;border:none;font-weight:bold;cursor:pointer;font-family:'Arial Black',sans-serif;font-size:13px;}
+    .ace-btn.save{background:linear-gradient(135deg,#f1c40f,#e67e22);color:#000;}
+    .ace-btn.cancel{background:rgba(255,255,255,0.08);color:#888;border:1px solid rgba(255,255,255,0.15);}
+
+    /* ══ SHOP MODAL ══ */
+    #shopModal{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:400;display:none;align-items:center;justify-content:center;}
+    #shopModal.show{display:flex;}
+    .shop-panel{width:92%;max-width:440px;background:linear-gradient(160deg,#0d1117 0%,#161c26 60%,#0a0f1a 100%);border:2px solid rgba(255,215,0,0.35);border-radius:22px;padding:24px 20px 20px;position:relative;box-shadow:0 0 60px rgba(255,215,0,0.1),0 20px 60px rgba(0,0,0,0.8);max-height:92vh;overflow-y:auto;}
+    .shop-panel::-webkit-scrollbar{width:4px;}
+    .shop-panel::-webkit-scrollbar-thumb{background:#ffd70033;border-radius:4px;}
+    .shop-close{position:absolute;top:14px;right:14px;width:30px;height:30px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+    .shop-close:hover{background:rgba(231,76,60,0.3);color:#fff;}
+    .shop-title{font-size:20px;font-weight:900;color:#ffd700;text-align:center;margin-bottom:16px;letter-spacing:1px;text-shadow:0 0 14px rgba(255,215,0,0.4);}
+    .shop-tabs{display:flex;gap:4px;background:rgba(255,255,255,0.05);border-radius:12px;padding:4px;margin-bottom:16px;}
+    .shop-tab{flex:1;padding:10px;border-radius:9px;border:1px solid transparent;cursor:pointer;font-family:'Arial Black',sans-serif;font-size:13px;font-weight:bold;letter-spacing:.5px;transition:all .2s;background:transparent;color:#556;}
+    .shop-tab.active-coin{background:rgba(255,215,0,0.15);color:#ffd700;border-color:rgba(255,215,0,0.35);}
+    .shop-tab.active-gem{background:rgba(0,210,255,0.15);color:#00d2ff;border-color:rgba(0,210,255,0.35);}
+    .shop-pkg{display:flex;align-items:center;gap:14px;border-radius:14px;padding:13px 16px;margin-bottom:10px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;}
+    .shop-pkg:hover{transform:translateY(-2px);}
+    .shop-pkg:active{transform:scale(0.97);}
+    .shop-pkg.coin-pkg{background:rgba(255,215,0,0.08);border:1.5px solid rgba(255,215,0,0.3);}
+    .shop-pkg.coin-pkg:hover{border-color:rgba(255,215,0,0.6);background:rgba(255,215,0,0.13);}
+    .shop-pkg.gem-pkg{background:rgba(0,210,255,0.08);border:1.5px solid rgba(0,210,255,0.3);}
+    .shop-pkg.gem-pkg:hover{border-color:rgba(0,210,255,0.6);background:rgba(0,210,255,0.13);}
+    .shop-pkg-icon{font-size:30px;flex-shrink:0;}
+    .shop-pkg-info{flex:1;}
+    .shop-pkg-amount{font-size:18px;font-weight:900;color:#fff;font-family:'Arial Black',sans-serif;}
+    .shop-pkg-bonus{font-size:11px;margin-top:2px;}
+    .shop-pkg-bonus.coin{color:#ffd700;}
+    .shop-pkg-bonus.gem{color:#00d2ff;}
+    .shop-pkg-price{padding:8px 16px;border-radius:10px;font-size:13px;font-weight:900;font-family:'Arial Black',sans-serif;white-space:nowrap;flex-shrink:0;}
+    .shop-pkg-price.coin{background:linear-gradient(135deg,#f1c40f,#e67e22);color:#000;}
+    .shop-pkg-price.gem{background:linear-gradient(135deg,#00d2ff,#0099cc);color:#000;}
+    .shop-footer{font-size:10px;color:#334;text-align:center;margin-top:8px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);}
+  </style>
+</head>
+<body onload="init()">
+
+<div id="orientationWarning">
+  <span style="font-size:50px;margin-bottom:20px;">🔄</span>
+  Vui lòng xoay ngang<br>điện thoại để chơi
+</div>
+
+<div id="fpsOverlay">FPS: --</div>
+<div id="mainBackground"></div>
+<div id="toast">Thông báo</div>
+
+<div id="flashEffect">
+  <div class="trans-box">
+    <h2 class="trans-title" id="transTitleL">LOADING</h2>
+    <p class="trans-sub" id="transSubL">Loading...</p>
+  </div>
+  <div class="trans-box">
+    <h2 class="trans-title" id="transTitleR">SYSTEM</h2>
+    <p class="trans-sub" id="transSubR">Đang tải...</p>
+  </div>
+</div>
+
+<!-- AUTH -->
+<div id="authOverlay">
+  <div class="auth-container">
+    <div class="auth-logo">
+      <span class="auth-logo-title">STICK WAR</span>
+      <div class="auth-logo-sub">Ultimate Logic</div>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Đăng nhập</button>
+      <button class="auth-tab" id="tabRegister" onclick="switchTab('register')">Đăng ký</button>
+    </div>
+    <div class="auth-form">
+      <div class="auth-field">
+        <span class="auth-field-icon">👤</span>
+        <input class="auth-input" id="authUser" type="text" placeholder="Tên tài khoản..." autocomplete="username" maxlength="20">
+      </div>
+      <div class="auth-field">
+        <span class="auth-field-icon">🔒</span>
+        <input class="auth-input" id="authPass" type="password" placeholder="Mật khẩu..." autocomplete="current-password" maxlength="32">
+        <button class="auth-eye" id="eyeBtn" onclick="toggleEye()">👁️</button>
+      </div>
+      <div class="auth-field" id="confirmField" style="display:none;">
+        <span class="auth-field-icon">🔐</span>
+        <input class="auth-input" id="authConfirm" type="password" placeholder="Xác nhận mật khẩu..." maxlength="32">
+      </div>
+      <div class="auth-strength" id="strengthBar">
+        <div class="str-bar" id="sb1"></div>
+        <div class="str-bar" id="sb2"></div>
+        <div class="str-bar" id="sb3"></div>
+        <div class="str-bar" id="sb4"></div>
+        <span class="str-label" id="sbLabel">Độ mạnh</span>
+      </div>
+      <div class="auth-msg" id="authMsg"></div>
+      <button class="auth-btn" id="authSubmit" onclick="handleAuth()">VÀO GAME</button>
+    </div>
+    <div class="auth-footer">
+      Phiên bản 2.0 (Online) &nbsp;·&nbsp; <a onclick="resetGame()">Đăng xuất & xóa cache cục bộ</a>
+    </div>
+  </div>
+</div>
+
+<!-- REWARD -->
+<div id="rewardNotif">
+  <h2 id="rewardTitle">🏆 TRẬN ĐẤU KẾT THÚC</h2>
+  <div class="reward-coins" id="rewardCoinsDisplay">0 💰</div>
+  <div class="reward-row">
+    <div class="reward-item"><div class="r-icon">💀</div><div class="r-val" id="rewardKills">0</div><div class="r-label">HẠ GỤC</div></div>
+    <div class="reward-item"><div class="r-icon">⭐</div><div class="r-val" id="rewardLevel">1</div><div class="r-label">CẤP ĐỘ</div></div>
+    <div class="reward-item"><div class="r-icon">🌊</div><div class="r-val" id="rewardWave">1</div><div class="r-label">SÓNG</div></div>
+  </div>
+  <p id="rewardDetail" style="color:#aaa;font-size:12px;margin:5px 0;"></p>
+  <button class="btn-claim" onclick="claimReward()">✅ NHẬN THƯỞNG</button>
+</div>
+
+<!-- PROFILE MODAL -->
+<div id="profileModal">
+  <div class="pm-panel">
+    <button class="pm-close" onclick="closeProfile()">✕</button>
+    <div class="pm-hero">
+      <div class="pm-avatar-big"><div class="pm-avatar-inner" id="pm-avatar-big">🧙</div></div>
+      <div class="pm-hero-info">
+        <div class="pm-hero-name" id="pm-name-display">Chiến Binh</div>
+        <div class="pm-hero-id" id="pm-id-display">ID: #000001</div>
+        <div class="pm-hero-user" id="pm-user-display">@username</div>
+        <div class="pm-badges-row">
+          <span class="pm-badge gold">⭐ Survivor</span>
+          <span class="pm-badge blue" id="pm-badge-rank">🥉 Bronze</span>
+          <span class="pm-badge red" id="pm-badge-kills">💀 Newbie</span>
+        </div>
+      </div>
+    </div>
+    <div class="pm-rank-card">
+      <div class="pm-rank-icon-big" id="pm-rank-icon-big">🥉</div>
+      <div class="pm-rank-detail">
+        <div class="pm-rank-name" id="pm-rank-name">BRONZE I</div>
+        <div class="pm-rank-sub" id="pm-rank-sub">Tăng 40 điểm để lên hạng</div>
+        <div class="pm-rank-prog-wrap"><div class="pm-rank-prog" id="pm-rank-prog" style="width:30%"></div></div>
+        <div class="pm-rank-pts" id="pm-rank-pts">60 / 200 RP</div>
+      </div>
+    </div>
+    <div class="pm-section-title">📊 THỐNG KÊ TRẬN ĐẤU</div>
+    <div class="pm-stats-grid">
+      <div class="pm-stat-box"><div class="pm-stat-icon">💀</div><div class="pm-stat-val gold" id="pm-st-kills">0</div><div class="pm-stat-lbl">Tổng kill</div></div>
+      <div class="pm-stat-box"><div class="pm-stat-icon">🏆</div><div class="pm-stat-val gold" id="pm-st-wins">0</div><div class="pm-stat-lbl">Chiến thắng</div></div>
+      <div class="pm-stat-box"><div class="pm-stat-icon">🎮</div><div class="pm-stat-val blue" id="pm-st-games">0</div><div class="pm-stat-lbl">Trận đã chơi</div></div>
+      <div class="pm-stat-box"><div class="pm-stat-icon">⏱</div><div class="pm-stat-val blue" id="pm-st-time">0s</div><div class="pm-stat-lbl">Sống sót nhất</div></div>
+      <div class="pm-stat-box"><div class="pm-stat-icon">🔥</div><div class="pm-stat-val red" id="pm-st-spree">0x</div><div class="pm-stat-lbl">Best Spree</div></div>
+      <div class="pm-stat-box"><div class="pm-stat-icon">💰</div><div class="pm-stat-val green" id="pm-st-coins">0</div><div class="pm-stat-lbl">Tổng coin</div></div>
+      <div class="pm-stat-box"><div class="pm-stat-icon">⚔️</div><div class="pm-stat-val red" id="pm-st-dmg">0</div><div class="pm-stat-lbl">Max dame</div></div>
+      <div class="pm-stat-box"><div class="pm-stat-icon">🌊</div><div class="pm-stat-val purple" id="pm-st-wave">1</div><div class="pm-stat-lbl">Sóng cao nhất</div></div>
+      <div class="pm-stat-box"><div class="pm-stat-icon">📈</div><div class="pm-stat-val gold" id="pm-st-wr">0%</div><div class="pm-stat-lbl">Tỷ lệ thắng</div></div>
+    </div>
+    <div class="pm-section-title">🏅 THÀNH TÍCH</div>
+    <div class="pm-ach-grid" id="pm-ach-grid"></div>
+    <div class="pm-section-title">📋 LỊCH SỬ TRẬN GẦN ĐÂY</div>
+    <div class="pm-history" id="pm-history"></div>
+    <button class="pm-edit-btn" onclick="openNameModal()">✏️ CHỈNH SỬA HỒ SƠ</button>
+  </div>
+</div>
+
+<!-- NAME EDIT -->
+<div id="nameModal">
+  <div class="nm-box">
+    <h3>✏️ CHỈNH SỬA HỒ SƠ</h3>
+    <div style="font-size:11px;color:#555;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">Chọn avatar</div>
+    <div class="av-grid" id="av-grid"></div>
+    <div style="font-size:11px;color:#555;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Tên hiển thị</div>
+    <input class="nm-input" id="nameInput" type="text" maxlength="14" placeholder="Tên của bạn...">
+    <button class="nm-btn" onclick="saveName()">💾 LƯU</button>
+    <div class="nm-cancel" onclick="closeNameModal()">Huỷ</div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="adminPage">
+  <div class="adm-header">
+    <h2>⚙️ ADMIN PANEL</h2>
+    <div class="adm-header-right">
+      <span class="adm-badge" id="adm-version">v2.0</span>
+      <button class="btn-close-admin" onclick="closeAdmin()">✕ THOÁT</button>
+    </div>
+  </div>
+  <div class="adm-toolbar">
+    <input class="adm-search" id="adminSearch" placeholder="🔍 Tìm người chơi..." oninput="filterPlayers()">
+    <span class="adm-count" id="adminCount">0 người chơi</span>
+    <button class="adm-btn-danger" onclick="confirmNuke()">🗑️ Xóa tất cả</button>
+  </div>
+  <div class="adm-body" id="playerList"></div>
+</div>
+
+<div id="adminCoinEdit">
+  <div class="ace-box">
+    <h3>💰 CHỈNH SỬA COIN</h3>
+    <div style="font-size:12px;color:#556;margin-bottom:10px;" id="aceTarget">@user</div>
+    <input class="ace-input" id="aceAmount" type="number" min="0" placeholder="Số coin...">
+    <div class="ace-row">
+      <button class="ace-btn save" onclick="saveAdminCoin()">💾 Lưu</button>
+      <button class="ace-btn cancel" onclick="closeAdminCoin()">Huỷ</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div id="changePwModal">
+  <div class="cpw-box">
+    <div class="cpw-header">
+      <span class="cpw-title">ĐỔI MẬT KHẨU</span>
+      <button class="cpw-close" onclick="closeChangePwModal()">✕</button>
+    </div>
+    <div class="cpw-body">
+      <div class="cpw-field">
+        <span class="cpw-field-icon">🔒</span>
+        <input class="cpw-input" id="cpw-old" type="password" placeholder="Mật khẩu hiện tại..." maxlength="32">
+      </div>
+      <div class="cpw-field">
+        <span class="cpw-field-icon">🔑</span>
+        <input class="cpw-input" id="cpw-new" type="password" placeholder="Mật khẩu mới..." maxlength="32">
+      </div>
+      <div class="cpw-field">
+        <span class="cpw-field-icon">🔐</span>
+        <input class="cpw-input" id="cpw-confirm" type="password" placeholder="Xác nhận mật khẩu mới..." maxlength="32">
+      </div>
+      <div class="cpw-msg" id="cpw-msg"></div>
+      <button class="cpw-btn" onclick="submitChangePw()">⚔️ &nbsp; XÁC NHẬN ĐỔI</button>
+    </div>
+  </div>
+</div>
+
+<!-- TERMS MODAL -->
+<div id="termsModal">
+  <div class="terms-box">
+    <div class="terms-header">
+      <span class="terms-title">ĐIỀU KHOẢN SỬ DỤNG</span>
+      <button class="terms-close" onclick="closeTermsModal()">✕</button>
+    </div>
+    <div class="terms-scroll">
+      <div class="terms-art">⚔ ᛭ ⚔</div>
+      <div class="terms-h1">1. Chấp nhận điều khoản</div>
+      <div class="terms-p">Bằng cách tạo tài khoản hoặc sử dụng <b>Stick War Ultimate</b>, bạn xác nhận đã đọc, hiểu và đồng ý với toàn bộ các điều khoản dưới đây.</div>
+      <div class="terms-rule">· · · · ·</div>
+      <div class="terms-h1">2. Tài khoản người chơi</div>
+      <div class="terms-p">Mỗi người chơi chịu trách nhiệm bảo mật thông tin đăng nhập. Không chia sẻ, mua bán hoặc chuyển nhượng tài khoản. Vi phạm có thể bị xóa tài khoản.</div>
+      <div class="terms-rule">· · · · ·</div>
+      <div class="terms-h1">3. Hành vi người chơi</div>
+      <div class="terms-p">Nghiêm cấm hack, cheat, bot. Không quấy rối người chơi khác. Vi phạm dẫn đến <b>khóa tài khoản vĩnh viễn</b>.</div>
+      <div class="terms-rule">· · · · ·</div>
+      <div class="terms-h1">4. Dữ liệu & Quyền riêng tư</div>
+      <div class="terms-p">Dữ liệu được lưu trữ trên server online. Chúng tôi không thu thập hay chia sẻ thông tin cá nhân với bên thứ ba.</div>
+      <div class="terms-rule">· · · · ·</div>
+      <div class="terms-h1">5. Liên hệ</div>
+      <div class="terms-p">Email: <b>nguyenthanhnhutdepzai@gmail.com</b></div>
+      <div class="terms-art" style="margin-top:18px;margin-bottom:0;">⚔ ᛭ ⚔</div>
+    </div>
+  </div>
+</div>
+
+<!-- SHOP MODAL -->
+<div id="shopModal">
+  <div class="shop-panel">
+    <button class="shop-close" onclick="closeShop()">✕</button>
+    <div class="shop-title">🛒 CỬA HÀNG</div>
+    <div class="shop-tabs">
+      <button class="shop-tab active-coin" id="shopTabCoin" onclick="switchShopTab('coin')">💰 Coin</button>
+      <button class="shop-tab" id="shopTabGem" onclick="switchShopTab('gem')">💎 Kim Cương</button>
+    </div>
+    <div id="shopGrid"></div>
+    <div class="shop-footer">🔒 Thanh toán an toàn · Hỗ trợ 24/7</div>
+  </div>
+</div>
+
+<!-- MENU -->
+<div id="menuScreen" class="screen active" style="display:none;">
+  <div id="profileCard" onclick="openProfile()">
+    <div class="pc-avatar-wrap">
+      <div class="pc-avatar-inner" id="pc-avatar">🧙</div>
+      <div class="pc-online"></div>
+      <div class="pc-lvl-badge" id="pc-lvl">LV.1</div>
+    </div>
+    <div class="pc-info">
+      <div class="pc-name" id="pc-name">Chiến Binh</div>
+      <div class="pc-rank-row">
+        <span class="pc-rank-icon" id="pc-rank-icon">🥉</span>
+        <span class="pc-rank-text" id="pc-rank-text">Bronze I</span>
+        <span class="pc-tag">RANK</span>
+      </div>
+      <div class="pc-xp-row">
+        <div class="pc-xp-bar-wrap"><div class="pc-xp-bar" id="pc-xp-bar"></div></div>
+        <div class="pc-xp-txt" id="pc-xp-txt">0%</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="coinBar">
+    <div class="cb-item" onclick="openShop('coin')" title="Mua Coin">
+      <img src="/gamedevelopment/assets/images/coindaucong.png" class="cb-icon" style="width:22px;height:22px;object-fit:contain;vertical-align:middle;">
+      <span class="cb-val" id="menu-coins">0</span>
+    </div>
+    <div class="cb-sep"></div>
+    <div class="cb-item" onclick="openShop('gem')" title="Mua Kim Cương">
+      <img src="/gamedevelopment/assets/images/gems.png" class="cb-icon" style="width:22px;height:22px;object-fit:contain;vertical-align:middle;">
+      <span class="cb-val" id="menu-gems">0</span>
+    </div>
+    <div class="cb-sep"></div>
+    <div class="cb-item">
+      <span class="cb-icon">⚡</span>
+      <span class="cb-val" id="menu-energy">5/5</span>
+    </div>
+  </div>
+
+  <button id="logoutBtn" onclick="logout()">🚪 Đăng xuất</button>
+
+  <div class="menu-content">
+    <div class="title-text">STICK WAR</div>
+    <div class="menu-btn-group">
+      <div class="menu-btn play-btn" onclick="smartNavigate('mapScreen','CHIẾN TRƯỜNG','Chọn vùng chiếm đóng')"></div>
+      <div class="menu-btn shop-btn" onclick="openShop('coin')"></div>
+      <div class="menu-btn settings-btn" onclick="smartNavigate('settingsScreen','CÀI ĐẶT','Cấu hình hệ thống')"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="settingsScreen" class="screen">
+  <div class="ambient-glow glow-top"></div>
+  <div class="ambient-glow glow-bot"></div>
+  <div class="settings-wrap">
+    <div class="scroll-panel">
+      <div class="scroll-corner-tr"></div>
+      <div class="scroll-corner-bl"></div>
+      <div class="scroll-inner">
+        <div class="settings-header">
+          <span class="hdr-rune">᛬</span>
+          <span class="settings-title-text">THIẾT LẬP</span>
+          <span class="hdr-rune">᛬</span>
+        </div>
+        <div class="settings-body-scroll">
+
+          <div class="settings-section">
+            <div class="section-label">Hiển thị</div>
+            <div class="s-row">
+              <div class="s-label"><span class="s-icon">🖥️</span><span class="s-label-text">Chất lượng đồ họa</span></div>
+              <button id="graphicBtn" class="toggle-btn on" onclick="cycleGraphic()">CAO</button>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><span class="s-icon">⚡</span><span class="s-label-text">Giới hạn FPS</span></div>
+              <button id="fpsLimitBtn" class="toggle-btn on" onclick="cycleFpsLimit()">60 FPS</button>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><span class="s-icon">✨</span><span class="s-label-text">Hoạt họa nền</span></div>
+              <button id="idleAnimBtn" class="toggle-btn on" onclick="toggleIdleAnim()">BẬT</button>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="section-label">Âm thanh</div>
+            <div class="s-row">
+              <div class="s-label"><span class="s-icon">🎵</span><span class="s-label-text">Nhạc nền</span></div>
+              <div class="slider-wrap">
+                <input type="range" id="bgMusicRange" class="s-slider" min="0" max="100" value="20" oninput="updateBgMusic(this.value)" style="--val:20%">
+                <span id="bgMusicVal" class="slider-val">20%</span>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><span class="s-icon">🔊</span><span class="s-label-text">Hiệu ứng âm thanh</span></div>
+              <div class="slider-wrap">
+                <input type="range" id="sfxRange" class="s-slider" min="0" max="100" value="80" oninput="updateSfx(this.value)" style="--val:80%">
+                <span id="sfxVal" class="slider-val">80%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="section-label">Hiệu năng</div>
+            <div class="stats-tablet">
+              <div class="stats-grid">
+                <div class="stat-stone"><div class="stat-stone-val" id="currentFps">--</div><div class="stat-stone-lbl">FPS</div></div>
+                <div class="stat-stone"><div class="stat-stone-val amber" id="frameTime">--</div><div class="stat-stone-lbl">Frame</div></div>
+                <div class="stat-stone"><div class="stat-stone-val crimson" id="currentMem">--</div><div class="stat-stone-lbl">Mem</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="section-label">Thông tin & Hỗ trợ</div>
+            <div class="s-row">
+              <div class="s-label"><span class="s-icon">ℹ️</span><span class="s-label-text">Phiên bản</span></div>
+              <span class="s-static-val">v 2.0 <span class="s-badge-new">ONLINE</span></span>
+            </div>
+            <div class="s-row s-row-btn" onclick="openMailSupport()">
+              <div class="s-label"><span class="s-icon">📧</span><span class="s-label-text">Liên hệ hỗ trợ</span></div>
+              <span class="s-arrow">›</span>
+            </div>
+            <div class="s-row s-row-btn" onclick="openTermsModal()">
+              <div class="s-label"><span class="s-icon">📋</span><span class="s-label-text">Điều khoản sử dụng</span></div>
+              <span class="s-arrow">›</span>
+            </div>
+            <div class="s-row s-row-btn" onclick="showToast('Hướng dẫn sẽ ra mắt sớm!','warn')">
+              <div class="s-label"><span class="s-icon">🎓</span><span class="s-label-text">Hướng dẫn chơi</span></div>
+              <span class="s-coming">SẮP RA</span>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="section-label">Tài khoản</div>
+            <div class="s-row s-row-btn" onclick="openChangePwModal()">
+              <div class="s-label"><span class="s-icon">🔐</span><span class="s-label-text">Đổi mật khẩu</span></div>
+              <span class="s-arrow">›</span>
+            </div>
+            <div class="s-row s-row-btn s-row-danger" onclick="confirmDeleteAccount()">
+              <div class="s-label"><span class="s-icon">🗑️</span><span class="s-label-text" style="color:#cd4444;">Xóa tài khoản</span></div>
+              <span class="s-arrow" style="color:#cd4444;">›</span>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="section-label">Tác giả</div>
+            <div class="credits-tablet">
+              <div class="credit-row">
+                <div class="credit-role">👨‍💻 Dev Team</div>
+                <div class="credit-name">Mr Bò Sữa <span class="credit-aka">(Nhựt)</span></div>
+              </div>
+              <div class="credit-divider"></div>
+              <div class="credit-row">
+                <div class="credit-role">🎨 Art & Design</div>
+                <div class="credit-name">Mr Bò Sữa Nhựt</div>
+              </div>
+              <div class="credit-divider"></div>
+              <div class="credit-row">
+                <div class="credit-role">🎵 Music & SFX</div>
+                <div class="credit-name">AI <span class="credit-aka">(Generated)</span></div>
+              </div>
+              <div class="credits-footer-line">⚔️ &nbsp; Stick War Ultimate &nbsp; · &nbsp; v2.0 ONLINE &nbsp; · &nbsp; 2025 &nbsp; ⚔️</div>
+            </div>
+          </div>
+
+        </div>
+        <div class="settings-footer">
+          <button class="back-stone-btn" onclick="smartNavigate('menuScreen','STICK WAR','Quay lại menu')">◀ QUAY LẠI</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAP -->
+<div id="mapScreen" class="screen">
+  <div class="level-info">SELECT LEVEL<br><img src="/gamedevelopment/assets/images/coi.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;"> <span id="map-coins">0</span></div>
+  <div class="node node-1" onclick="showPreview(1)"></div>
+  <div class="node node-2" onclick="showPreview(2)"></div>
+  <div class="node node-3" onclick="showPreview(3)"></div>
+  <div id="previewBox">
+    <h3 id="previewTitle" style="color:#ffd700;margin:0;">LEVEL</h3>
+    <p class="preview-reward">Phần thưởng: <span id="previewReward">~30-80 💰</span></p>
+    <button class="btn-play" onclick="startBattle()">⚔️ CHƠI NGAY</button>
+    <p onclick="closePreview()" style="cursor:pointer;color:#aaa;font-size:14px;margin-top:15px;">[Đóng]</p>
+  </div>
+  <div class="btn-back btn-back-map" onclick="smartNavigate('menuScreen','STICK WAR','Thoát chiến trường')"></div>
+</div>
+
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════════════════════
+   CẤU HÌNH SERVER
+   ══════════════════════════════════════════════════════════ */
+const API_BASE = 'https://stick-war-server.onrender.com/api';
+const TOKEN_KEY = 'sw_token';
+const K_result='stickwar_battle_result', K_level='stickwar_selected_level', K_pb='stickwar_personal_best';
+
+const BG_MENU = '/gamedevelopment/assets/backrounds/backroundmedium.png';
+const BG_MAP  = 'https://assets.dcoder.tech/69ce071c4aee5c76848752cd/69ce07db4aee5c76848752d4/1775284269031.png';
+const AVATARS = ['🧙','⚔️','🦸','🗡️','🔱','💀','🧟','🐉','🦅','🤺'];
+
+let currentUser = null;   // username hiện tại
+let currentPlayer = null; // dữ liệu player mới nhất trả về từ server
+let authToken = null;     // JWT token
+let _lastAchSig = null;
+let _lastHistSig = null;
+
+const ACH_DEFS = [
+  {id:'first_blood',icon:'🩸',label:'First Blood',  check:(s)=>(s.totalKills||0)>=1},
+  {id:'kill10',     icon:'💀',label:'10 Kills',      check:(s)=>(s.totalKills||0)>=10},
+  {id:'kill50',     icon:'☠️', label:'50 Kills',      check:(s)=>(s.totalKills||0)>=50},
+  {id:'kill100',    icon:'💣',label:'100 Kills',     check:(s)=>(s.totalKills||0)>=100},
+  {id:'first_win',  icon:'🏆',label:'First Win',     check:(s)=>(s.wins||0)>=1},
+  {id:'win5',       icon:'👑',label:'5 Wins',        check:(s)=>(s.wins||0)>=5},
+  {id:'survive60',  icon:'⏱', label:'60s Sống sót',  check:(s)=>(s.bestTime||0)>=60},
+  {id:'survive120', icon:'⌛',label:'120s Sống sót', check:(s)=>(s.bestTime||0)>=120},
+  {id:'spree5',     icon:'🔥',label:'5x Spree',      check:(s)=>(s.bestSpree||0)>=5},
+  {id:'wave5',      icon:'🌊',label:'Wave 5',        check:(s)=>(s.bestWave||0)>=5},
+  {id:'coin500',    icon:'💰',label:'500 Coin',      check:(s)=>(s.coins||0)>=500},
+  {id:'veteran',    icon:'🎖️',label:'10 Trận',      check:(s)=>(s.games||0)>=10},
+];
+
+const SHOP_PACKAGES = {
+  coin: [
+    {icon:'💰',amount:100,  price:'5.000đ',   bonus:''},
+    {icon:'💰',amount:300,  price:'10.000đ',  bonus:'+50 tặng thêm'},
+    {icon:'💰',amount:700,  price:'20.000đ',  bonus:'+150 tặng thêm'},
+    {icon:'💰',amount:2000, price:'50.000đ',  bonus:'🔥 Phổ biến nhất'},
+    {icon:'💰',amount:5000, price:'100.000đ', bonus:'⭐ Giá trị nhất'},
+  ],
+  gem: [
+    {icon:'💎',amount:10,  price:'5.000đ',   bonus:''},
+    {icon:'💎',amount:30,  price:'10.000đ',  bonus:'+5 tặng thêm'},
+    {icon:'💎',amount:80,  price:'20.000đ',  bonus:'+20 tặng thêm'},
+    {icon:'💎',amount:250, price:'50.000đ',  bonus:'🔥 Phổ biến nhất'},
+    {icon:'💎',amount:600, price:'100.000đ', bonus:'⭐ Giá trị nhất'},
+  ]
+};
+let shopCurrentTab = 'coin';
+const _shopHtmlCache = {};
+
+/* ══════════════════════════════════════════════════════════
+   API HELPER
+   ══════════════════════════════════════════════════════════ */
+async function apiCall(endpoint, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  try {
+    const res = await fetch(API_BASE + endpoint, { ...options, headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data.error || 'Lỗi không xác định', status: res.status };
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: 'Không thể kết nối tới server. Kiểm tra mạng của bạn.', networkError: true };
+  }
+}
+
+function saveToken(t){ authToken=t; localStorage.setItem(TOKEN_KEY,t); }
+function loadToken(){ return localStorage.getItem(TOKEN_KEY); }
+function clearToken(){ authToken=null; localStorage.removeItem(TOKEN_KEY); }
+
+/* ══════════════════════════════════════════════════════════
+   SHOP (giữ nguyên logic UI, chưa có backend thanh toán)
+   ══════════════════════════════════════════════════════════ */
+function openShop(tab){ shopCurrentTab=tab||'coin'; document.getElementById('shopModal').classList.add('show'); switchShopTab(shopCurrentTab); }
+function closeShop(){ document.getElementById('shopModal').classList.remove('show'); }
+function switchShopTab(tab){
+  shopCurrentTab=tab; const isCoin=tab==='coin';
+  document.getElementById('shopTabCoin').className='shop-tab'+(isCoin?' active-coin':'');
+  document.getElementById('shopTabGem').className='shop-tab'+(!isCoin?' active-gem':'');
+  if(!_shopHtmlCache[tab]){
+    const pkgs=SHOP_PACKAGES[tab], type=isCoin?'coin':'gem';
+    _shopHtmlCache[tab]=pkgs.map((p,i)=>`
+      <div class="shop-pkg ${type}-pkg" onclick="buyPackage('${tab}',${i})">
+        <div class="shop-pkg-icon">${p.icon}</div>
+        <div class="shop-pkg-info">
+          <div class="shop-pkg-amount">${p.amount.toLocaleString('vi-VN')} ${isCoin?'Coin':'Kim Cương'}</div>
+          ${p.bonus?`<div class="shop-pkg-bonus ${type}">${p.bonus}</div>`:''}
+        </div>
+        <div class="shop-pkg-price ${type}">${p.price}</div>
+      </div>`).join('');
+  }
+  document.getElementById('shopGrid').innerHTML=_shopHtmlCache[tab];
+}
+function buyPackage(tab,idx){ const p=SHOP_PACKAGES[tab][idx]; showToast(`Tính năng thanh toán sắp ra mắt! (${p.price})`,'warn'); }
+
+/* ══════════════════════════════════════════════════════════
+   AUTH UI
+   ══════════════════════════════════════════════════════════ */
+let authMode='login';
+function switchTab(mode){
+  authMode=mode;
+  document.getElementById('tabLogin').classList.toggle('active',mode==='login');
+  document.getElementById('tabRegister').classList.toggle('active',mode==='register');
+  document.getElementById('confirmField').style.display=mode==='register'?'':'none';
+  document.getElementById('strengthBar').classList.toggle('show',mode==='register');
+  document.getElementById('authSubmit').textContent=mode==='login'?'VÀO GAME':'TẠO TÀI KHOẢN';
+  clearAuthMsg();
+  document.getElementById('authUser').value='';
+  document.getElementById('authPass').value='';
+  document.getElementById('authConfirm').value='';
+}
+function showAuthMsg(msg,type='error'){ const el=document.getElementById('authMsg'); el.textContent=msg; el.className='auth-msg '+type+' show'; }
+function clearAuthMsg(){ document.getElementById('authMsg').className='auth-msg'; }
+function toggleEye(){ const inp=document.getElementById('authPass'),btn=document.getElementById('eyeBtn'); if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}else{inp.type='password';btn.textContent='👁️';} }
+function updateStrength(){
+  if(authMode!=='register')return;
+  const v=document.getElementById('authPass').value; let score=0;
+  if(v.length>=6)score++;if(v.length>=10)score++;
+  if(/[A-Z]/.test(v)||/[0-9]/.test(v))score++;
+  if(/[^A-Za-z0-9]/.test(v))score++;
+  const colors=['#e74c3c','#e67e22','#f1c40f','#2ecc71'],labels=['Yếu','Trung bình','Mạnh','Rất mạnh'];
+  for(let i=1;i<=4;i++)document.getElementById('sb'+i).style.background=i<=score?colors[score-1]:'rgba(255,255,255,0.07)';
+  document.getElementById('sbLabel').textContent=v.length>0?(labels[Math.min(score,4)-1]||'Yếu'):'Độ mạnh';
+}
+
+async function handleAuth(){
+  const user=document.getElementById('authUser').value.trim(),pass=document.getElementById('authPass').value;
+  if(!user||!pass){showAuthMsg('Vui lòng điền đủ thông tin!');return;}
+  if(user.length<3){showAuthMsg('Tên tài khoản tối thiểu 3 ký tự!');return;}
+  if(pass.length<6){showAuthMsg('Mật khẩu tối thiểu 6 ký tự!');return;}
+  if(!/^[a-zA-Z0-9_]+$/.test(user)){showAuthMsg('Tên chỉ dùng chữ, số và dấu _');return;}
+
+  const btn=document.getElementById('authSubmit');
+  btn.disabled=true;
+
+  if(authMode==='register'){
+    const confirm=document.getElementById('authConfirm').value;
+    if(pass!==confirm){showAuthMsg('Mật khẩu xác nhận không khớp!');btn.disabled=false;return;}
+    btn.textContent='ĐANG XỬ LÝ...';
+    const r=await apiCall('/auth/register',{method:'POST',body:JSON.stringify({username:user,password:pass})});
+    btn.disabled=false; btn.textContent='TẠO TÀI KHOẢN';
+    if(!r.ok){showAuthMsg(r.error||'Đăng ký thất bại');return;}
+    saveToken(r.data.token); currentPlayer=r.data.player;
+    showAuthMsg('Đăng ký thành công! Đang vào game...','success');
+    setTimeout(()=>loginUser(user),700);
+  } else {
+    btn.textContent='ĐANG ĐĂNG NHẬP...';
+    const r=await apiCall('/auth/login',{method:'POST',body:JSON.stringify({username:user,password:pass})});
+    btn.disabled=false; btn.textContent='VÀO GAME';
+    if(!r.ok){showAuthMsg(r.error||'Đăng nhập thất bại');return;}
+    saveToken(r.data.token); currentPlayer=r.data.player;
+    loginUser(user);
+  }
+}
+
+async function loginUser(username){
+  currentUser=username.toLowerCase();
+  document.getElementById('authOverlay').classList.add('hidden');
+  document.getElementById('menuScreen').style.display='';
+  document.getElementById('menuScreen').classList.add('active');
+  await refreshPlayerFromServer();
+  checkBattleResult();
+  showToast('Chào mừng, '+(currentPlayer?.profile?.name||username)+'! 👋','success');
+}
+
+function logout(){
+  clearToken(); currentUser=null; currentPlayer=null;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('menuScreen').style.display='none';
+  document.getElementById('authOverlay').classList.remove('hidden');
+  switchTab('login');
+}
+
+function resetGame(){
+  if(!confirm('Đăng xuất và xóa token cục bộ? (Dữ liệu trên server vẫn được giữ)'))return;
+  clearToken();
+  location.reload();
+}
+
+/* ══════════════════════════════════════════════════════════
+   LẤY DỮ LIỆU TỪ SERVER
+   ══════════════════════════════════════════════════════════ */
+async function refreshPlayerFromServer(){
+  if(!authToken)return null;
+  const r=await apiCall('/player/me');
+  if(!r.ok){
+    if(r.status===401){ showToast('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại','error'); logout(); }
+    else if(r.networkError){ showToast('Không thể kết nối server','error'); }
+    return null;
+  }
+  currentPlayer=r.data;
+  refreshMenuCoins();
+  return currentPlayer;
+}
+
+function getCoins(){ return currentPlayer?.coins||0; }
+function getStats(){ return currentPlayer?.stats||{}; }
+function getHistory(){ return currentPlayer?.history||[]; }
+function getProfile(){ return currentPlayer?.profile||{name:'Chiến Binh',avatar:'🧙'}; }
+function getRankInfo(){ return currentPlayer?.rank||{name:'Bronze I',icon:'🥉'}; }
+function getRP(){ return currentPlayer?.rp||0; }
+function getLevel(){ return currentPlayer?.level||1; }
+
+/* ══════════════════════════════════════════════════════════
+   PROFILE UI
+   ══════════════════════════════════════════════════════════ */
+function getXpPct(s){ return Math.min(99,((s.totalKills||0)*2+(s.games||0)*5+(s.wins||0)*10)%100); }
+
+function updateProfileCard(){
+  const prof=getProfile(),stats=getStats(),rank=getRankInfo(),lv=getLevel(),xpPct=getXpPct(stats);
+  document.getElementById('pc-avatar').textContent=prof.avatar||'🧙';
+  document.getElementById('pc-name').textContent=prof.name||'Chiến Binh';
+  document.getElementById('pc-lvl').textContent='LV.'+lv;
+  document.getElementById('pc-rank-icon').textContent=rank.icon;
+  document.getElementById('pc-rank-text').textContent=rank.name;
+  document.getElementById('pc-xp-bar').style.width=xpPct+'%';
+  document.getElementById('pc-xp-txt').textContent=xpPct+'%';
+}
+
+function updateProfileModal(){
+  const prof=getProfile(),stats=getStats(),rank=getRankInfo(),lv=getLevel(),rp=getRP();
+  const games=stats.games||0,wins=stats.wins||0,wr=games>0?Math.round(wins/games*100):0;
+  document.getElementById('pm-avatar-big').textContent=prof.avatar||'🧙';
+  document.getElementById('pm-name-display').textContent=prof.name||'Chiến Binh';
+  document.getElementById('pm-id-display').textContent='ID: #'+String(currentPlayer?.id||1).padStart(6,'0');
+  document.getElementById('pm-user-display').textContent='@'+currentUser;
+  document.getElementById('pm-rank-icon-big').textContent=rank.icon;
+  document.getElementById('pm-rank-name').textContent=(rank.name||'').toUpperCase()+' • LV.'+lv;
+  document.getElementById('pm-rank-sub').textContent=`${rp} RP tích lũy`;
+  document.getElementById('pm-rank-prog').style.width='50%';
+  document.getElementById('pm-rank-pts').textContent=rp+' RP';
+  const kills=stats.totalKills||0;
+  document.getElementById('pm-badge-kills').textContent=kills>=100?'💀 Slayer':kills>=50?'💀 Veteran':kills>=10?'💀 Fighter':'💀 Newbie';
+  document.getElementById('pm-badge-rank').textContent=rank.icon+' '+rank.name;
+  document.getElementById('pm-st-kills').textContent=kills;
+  document.getElementById('pm-st-wins').textContent=wins;
+  document.getElementById('pm-st-games').textContent=games;
+  document.getElementById('pm-st-time').textContent=(stats.bestTime||0)+'s';
+  document.getElementById('pm-st-spree').textContent=(stats.bestSpree||0)+'x';
+  document.getElementById('pm-st-coins').textContent=getCoins();
+  document.getElementById('pm-st-dmg').textContent=stats.bestDmg||0;
+  document.getElementById('pm-st-wave').textContent=stats.bestWave||1;
+  document.getElementById('pm-st-wr').textContent=wr+'%';
+  const achSig=ACH_DEFS.map(a=>a.check(stats)?1:0).join('');
+  if(achSig!==_lastAchSig){
+    document.getElementById('pm-ach-grid').innerHTML=ACH_DEFS.map(a=>{const u=a.check(stats);return`<div class="pm-ach ${u?'unlocked':'locked'}"><div class="pm-ach-icon">${a.icon}</div><div class="pm-ach-lbl">${a.label}</div></div>`;}).join('');
+    _lastAchSig=achSig;
+  }
+  const hist=getHistory(),el=document.getElementById('pm-history');
+  const histSig=JSON.stringify(hist);
+  if(histSig!==_lastHistSig){
+    if(!hist.length){el.innerHTML='<div style="color:#444;font-size:12px;text-align:center;padding:12px 0;">Chưa có trận nào</div>';}
+    else{el.innerHTML=hist.map(h=>`<div class="pm-hist-row"><div class="pm-hist-result ${h.win?'win':'loss'}">${h.win?'WIN':'LOSS'}</div><div class="pm-hist-info"><strong>Cửa ải ${h.level}</strong> · Sóng ${h.wave} · ${h.kills} kill</div><div class="pm-hist-meta">${h.coins}💰<br>${h.time}s</div></div>`).join('');}
+    _lastHistSig=histSig;
+  }
+}
+
+function openProfile(){ updateProfileModal(); document.getElementById('profileModal').classList.add('show'); }
+function closeProfile(){ document.getElementById('profileModal').classList.remove('show'); }
+function openNameModal(){
+  closeProfile(); const prof=getProfile(); document.getElementById('nameInput').value=prof.name||'';
+  const current=prof.avatar||'🧙';
+  document.getElementById('av-grid').innerHTML=AVATARS.map(av=>`<div class="av-opt${av===current?' selected':''}" onclick="selectAvatar(this,'${av}')">${av}</div>`).join('');
+  document.getElementById('nameModal').classList.add('show');
+}
+function closeNameModal(){ document.getElementById('nameModal').classList.remove('show'); }
+function selectAvatar(el,av){ document.querySelectorAll('.av-opt').forEach(o=>o.classList.remove('selected')); el.classList.add('selected'); }
+
+async function saveName(){
+  const name=document.getElementById('nameInput').value.trim()||'Chiến Binh',sel=document.querySelector('.av-opt.selected'),avatar=sel?sel.textContent:'🧙';
+  const r=await apiCall('/player/profile',{method:'PUT',body:JSON.stringify({name,avatar})});
+  if(!r.ok){ showToast(r.error||'Không thể lưu hồ sơ','error'); return; }
+  currentPlayer=r.data;
+  updateProfileCard(); closeNameModal(); showToast('Hồ sơ đã lưu!','success');
+}
+
+/* ══════════════════════════════════════════════════════════
+   KẾT QUẢ TRẬN ĐẤU (battle.html ghi vào localStorage,
+   ở đây đọc ra rồi GỬI LÊN SERVER thay vì lưu cục bộ)
+   ══════════════════════════════════════════════════════════ */
+async function checkBattleResult(){
+  const raw=localStorage.getItem(K_result); if(!raw)return;
+  localStorage.removeItem(K_result);
+  let res; try{res=JSON.parse(raw);}catch(e){return;}
+
+  let spree=0, dmg=0;
+  try{
+    const pb=JSON.parse(localStorage.getItem(K_pb)||'{}');
+    spree=pb.bestSpree||0; dmg=pb.totalDmg||0;
+  }catch(e){}
+
+  const r=await apiCall('/player/battle-result',{method:'POST',body:JSON.stringify({
+    win:!!res.win, level:res.level||1, wave:res.wave||1, kills:res.kills||0,
+    coins:res.coins||0, time:res.time||0, spree, dmg
+  })});
+
+  if(!r.ok){ showToast('Không thể lưu kết quả trận lên server','error'); return; }
+  currentPlayer=r.data;
+
+  document.getElementById('rewardTitle').textContent=res.win?'🏆 CHIẾN THẮNG!':'💀 TRẬN ĐẤU KẾT THÚC';
+  document.getElementById('rewardCoinsDisplay').textContent=(res.coins||0)+' 💰';
+  document.getElementById('rewardKills').textContent=res.kills||0;
+  document.getElementById('rewardLevel').textContent=res.level||1;
+  document.getElementById('rewardWave').textContent=res.wave||1;
+  document.getElementById('rewardDetail').textContent=`Cửa ải ${res.level||'?'} | Sóng ${res.wave||1} | ${res.time||0}s`;
+  setTimeout(()=>document.getElementById('rewardNotif').classList.add('show'),350);
+}
+function claimReward(){ document.getElementById('rewardNotif').classList.remove('show'); refreshMenuCoins(); updateProfileCard(); }
+
+/* ══════════════════════════════════════════════════════════
+   COIN BAR
+   ══════════════════════════════════════════════════════════ */
+function refreshMenuCoins(){
+  const c=getCoins(),st=getStats();
+  document.getElementById('menu-coins').textContent=c;
+  document.getElementById('menu-gems').textContent=st.wins||0;
+  document.getElementById('menu-energy').textContent=Math.max(0,5-Math.floor((st.games||0)/2))+'/5';
+  document.getElementById('map-coins').textContent=c;
+  updateProfileCard();
+}
+
+/* ══════════════════════════════════════════════════════════
+   NAVIGATION (giữ nguyên logic gốc)
+   ══════════════════════════════════════════════════════════ */
+const bg=document.getElementById('mainBackground'),flash=document.getElementById('flashEffect'),screens=document.querySelectorAll('.screen');
+let navLock=false;
+function smartNavigate(screenId,title,sub){
+  if(navLock)return; navLock=true; closePreview();
+  document.getElementById('transTitleL').textContent=title;
+  document.getElementById('transSubL').textContent=sub;
+  flash.classList.add('active');
+  setTimeout(()=>{updateDisplay(screenId); flash.classList.remove('active'); setTimeout(()=>{navLock=false;},300);},350);
+}
+function updateDisplay(id){
+  screens.forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  bg.style.backgroundImage=`url('${id==='mapScreen'?BG_MAP:BG_MENU}')`;
+  if(id==='mapScreen')document.getElementById('map-coins').textContent=getCoins(); else refreshMenuCoins();
+  settingsActive = (id==='settingsScreen');
+  toggleScreenAnimations(id);
+}
+function toggleScreenAnimations(id){
+  const nodesShouldAnim = animOn && id==='mapScreen';
+  document.querySelectorAll('.node').forEach(n=>{ n.style.animationPlayState = nodesShouldAnim ? 'running' : 'paused'; });
+}
+
+/* ══════════════════════════════════════════════════════════
+   MAP / BATTLE
+   ══════════════════════════════════════════════════════════ */
+const REWARDS={1:'~30–80 💰',2:'~60–130 💰',3:'~100–200 💰'};
+let lvl=1;
+function showPreview(l){ lvl=l; document.getElementById('previewTitle').textContent='CỬA ẢI '+l; document.getElementById('previewReward').innerHTML=`Phần thưởng: <span>${REWARDS[l]||'?'}</span>`; document.getElementById('previewBox').classList.add('show'); }
+function closePreview(){ document.getElementById('previewBox').classList.remove('show'); }
+function startBattle(){ localStorage.setItem(K_level,lvl); document.getElementById('transTitleL').textContent='XUẤT QUÂN'; document.getElementById('transSubL').textContent=`Cửa ải ${lvl}...`; flash.classList.add('active'); setTimeout(()=>{window.location.href='battle.html';},450); }
+
+/* ══════════════════════════════════════════════════════════
+   SETTINGS (local, không cần server)
+   ══════════════════════════════════════════════════════════ */
+const gfxLabels=['THẤP','TB','CAO','SIÊU CAO']; let gfxIdx=2;
+function cycleGraphic(){ gfxIdx=(gfxIdx+1)%gfxLabels.length; const btn=document.getElementById('graphicBtn'); btn.textContent=gfxLabels[gfxIdx]; btn.className='toggle-btn '+(gfxIdx>0?'on':'off'); }
+const FPS_CAPS=[30,60,120,0],FPS_LABELS=['30 FPS','60 FPS','120 FPS','KHÔNG GH'];
+let fpsIdx=1,fpsInterval=1000/60;
+function cycleFpsLimit(){ fpsIdx=(fpsIdx+1)%FPS_CAPS.length; fpsInterval=FPS_CAPS[fpsIdx]>0?1000/FPS_CAPS[fpsIdx]:0; const btn=document.getElementById('fpsLimitBtn'); btn.textContent=FPS_LABELS[fpsIdx]; btn.className='toggle-btn '+(FPS_CAPS[fpsIdx]===0?'on':FPS_CAPS[fpsIdx]>=60?'on':'off'); }
+let animOn=true;
+function toggleIdleAnim(){
+  animOn=!animOn;
+  const btn=document.getElementById('idleAnimBtn'); btn.textContent=animOn?'BẬT':'TẮT'; btn.className='toggle-btn '+(animOn?'on':'off');
+  document.querySelectorAll('.ambient-glow').forEach(g=>g.style.animation=animOn?'':'none');
+  const activeScreen = document.querySelector('.screen.active');
+  toggleScreenAnimations(activeScreen ? activeScreen.id : '');
+}
+
+/* ══════════════════════════════════════════════════════════
+   AUDIO
+   ══════════════════════════════════════════════════════════ */
+const POOL_SIZE=4; let clickPool=[],poolIdx=0,audioReady=false,bgMusic=null,sfxVol=0.8;
+function buildAudioPool(){ for(let i=0;i<POOL_SIZE;i++){const a=new Audio('/gamedevelopment/assets/sounds/amthanhgo.mp3');a.preload='auto';a.volume=sfxVol;clickPool.push(a);} bgMusic=new Audio('/gamedevelopment/assets/sounds/nhacbackround.mp3');bgMusic.loop=true;bgMusic.volume=0.2;bgMusic.preload='auto'; }
+function playClick(){ if(!audioReady||!clickPool.length)return; const s=clickPool[poolIdx%POOL_SIZE];poolIdx++;s.volume=sfxVol;s.currentTime=0;s.play().catch(()=>{}); }
+let musicDebounce=null, sfxDebounce=null;
+function updateBgMusic(v){
+  document.getElementById('bgMusicVal').textContent=v+'%';
+  document.getElementById('bgMusicRange').style.setProperty('--val',v+'%');
+  clearTimeout(musicDebounce);
+  musicDebounce=setTimeout(()=>{ if(bgMusic)bgMusic.volume=v/100; },50);
+}
+function updateSfx(v){
+  document.getElementById('sfxVal').textContent=v+'%';
+  document.getElementById('sfxRange').style.setProperty('--val',v+'%');
+  clearTimeout(sfxDebounce);
+  sfxDebounce=setTimeout(()=>{ sfxVol=v/100; },50);
+}
+
+/* ══════════════════════════════════════════════════════════
+   TOAST
+   ══════════════════════════════════════════════════════════ */
+let toastTimer=null;
+function showToast(msg,type=''){ const t=document.getElementById('toast'); t.textContent=msg; t.className='show '+(type||''); clearTimeout(toastTimer); toastTimer=setTimeout(()=>{t.className='';},2500); }
+
+/* ══════════════════════════════════════════════════════════
+   ADMIN PANEL — đã tắt (không dùng chung với hệ thống mới,
+   dùng trực tiếp Render/GitHub hoặc gọi API admin bằng công cụ ngoài)
+   ══════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════
+   TÀI KHOẢN: đổi mật khẩu / xóa tài khoản (qua API)
+   ══════════════════════════════════════════════════════════ */
+function openMailSupport(){ window.location.href='mailto:nguyenthanhnhutdepzai@gmail.com?subject=Stick War Ultimate - Hỗ trợ'; }
+function openTermsModal(){ document.getElementById('termsModal').classList.add('show'); }
+function closeTermsModal(){ document.getElementById('termsModal').classList.remove('show'); }
+function openChangePwModal(){
+  document.getElementById('cpw-old').value=''; document.getElementById('cpw-new').value=''; document.getElementById('cpw-confirm').value='';
+  const m=document.getElementById('cpw-msg'); m.className='cpw-msg'; m.textContent='';
+  document.getElementById('changePwModal').classList.add('show');
+}
+function closeChangePwModal(){ document.getElementById('changePwModal').classList.remove('show'); }
+async function submitChangePw(){
+  const oldPw=document.getElementById('cpw-old').value,newPw=document.getElementById('cpw-new').value,cfmPw=document.getElementById('cpw-confirm').value;
+  const msg=document.getElementById('cpw-msg'),showMsg=(txt,type)=>{msg.textContent=txt;msg.className='cpw-msg '+type;};
+  if(!oldPw||!newPw||!cfmPw){showMsg('Vui lòng điền đầy đủ thông tin!','error');return;}
+  if(newPw.length<6){showMsg('Mật khẩu mới tối thiểu 6 ký tự!','error');return;}
+  if(newPw!==cfmPw){showMsg('Mật khẩu xác nhận không khớp!','error');return;}
+
+  const r=await apiCall('/auth/password',{method:'PUT',body:JSON.stringify({oldPassword:oldPw,newPassword:newPw})});
+  if(!r.ok){ showMsg(r.error||'Đổi mật khẩu thất bại','error'); return; }
+  showMsg('✅ Đổi mật khẩu thành công!','success');
+  setTimeout(closeChangePwModal,1400);
+}
+async function confirmDeleteAccount(){
+  const name=getProfile().name||currentUser;
+  if(!confirm(`⚠️ Xóa tài khoản "${name}"?\n\nTất cả dữ liệu trên server sẽ bị xóa vĩnh viễn.`))return;
+  if(!confirm(`Xác nhận lần cuối: xóa @${currentUser}?`))return;
+
+  const r=await apiCall('/auth/account',{method:'DELETE'});
+  if(!r.ok){ showToast(r.error||'Không thể xóa tài khoản','error'); return; }
+
+  clearToken(); currentUser=null; currentPlayer=null;
+  showToast('Tài khoản đã bị xóa.','error');
+  setTimeout(()=>{
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('menuScreen').style.display='none';
+    document.getElementById('authOverlay').classList.remove('hidden');
+    switchTab('login');
+  },800);
+}
+
+/* ══════════════════════════════════════════════════════════
+   FPS LOOP (giữ nguyên logic gốc)
+   ══════════════════════════════════════════════════════════ */
+const fpsOverlay=document.getElementById('fpsOverlay');
+const elCurFps=document.getElementById('currentFps'),elFrameTime=document.getElementById('frameTime'),elCurMem=document.getElementById('currentMem');
+let fc=0,lastFps=0,lastFT=0,ftAvg=0;
+let rafId=null;
+let settingsActive=false;
+
+function gameLoop(now){
+  if(fpsInterval>0&&now-lastFT<fpsInterval-0.5){rafId=requestAnimationFrame(gameLoop);return;}
+  const dt=now-lastFT; lastFT=now;
+  ftAvg = ftAvg===0 ? dt : ftAvg*0.9 + dt*0.1;
+  fc++;
+  if(now-lastFps>=1000){
+    const fps=Math.round(1000/ftAvg)||0;
+    fpsOverlay.textContent='FPS: '+fps;
+    if(settingsActive){
+      elCurFps.textContent=fps;
+      elFrameTime.textContent=ftAvg.toFixed(1)+'ms';
+      if(performance.memory)elCurMem.textContent=Math.round(performance.memory.usedJSHeapSize/1048576)+'MB';
+    }
+    fc=0; lastFps=now;
+  }
+  rafId=requestAnimationFrame(gameLoop);
+}
+function startGameLoop(){
+  if(rafId!==null)return;
+  const t0=performance.now(); lastFps=t0; lastFT=t0;
+  rafId=requestAnimationFrame(gameLoop);
+}
+function stopGameLoop(){
+  if(rafId!==null){cancelAnimationFrame(rafId);rafId=null;}
+}
+
+/* ══════════════════════════════════════════════════════════
+   INIT
+   ══════════════════════════════════════════════════════════ */
+async function init(){
+  bg.style.backgroundImage=`url('${BG_MENU}')`;
+  [BG_MENU,BG_MAP].forEach(src=>{ const img=new Image(); img.src=src; });
+
+  // Thử khôi phục phiên đăng nhập từ token đã lưu
+  const savedToken=loadToken();
+  if(savedToken){
+    authToken=savedToken;
+    const r=await apiCall('/player/me');
+    if(r.ok){
+      currentPlayer=r.data;
+      currentUser=r.data.username;
+      document.getElementById('authOverlay').classList.add('hidden');
+      document.getElementById('menuScreen').style.display='';
+      document.getElementById('menuScreen').classList.add('active');
+      checkBattleResult();
+      refreshMenuCoins();
+    } else {
+      clearToken(); // token hết hạn hoặc lỗi, quay lại màn hình đăng nhập
+    }
+  }
+
+  window.addEventListener('click',()=>{if(!audioReady){audioReady=true;buildAudioPool();bgMusic?.play().catch(()=>{});}},{once:true,passive:true});
+  document.addEventListener('click',(e)=>{
+    const t=e.target;
+    if(t.matches('.menu-btn,.btn-back,.toggle-btn,.back-stone-btn,.node,.btn-play,.btn-claim,.pm-edit-btn,.nm-btn,.av-opt,.auth-btn,.auth-tab,.shop-pkg,.shop-tab,.cpw-btn,.s-row-btn')||t.tagName==='BUTTON'||(t.tagName==='P'&&t.textContent.includes('[Đóng]'))) playClick();
+  },{passive:true});
+  document.addEventListener('touchmove',(e)=>{if(e.target===document.body)e.preventDefault();},{passive:false});
+  document.addEventListener('visibilitychange',()=>{
+    if(bgMusic){if(document.hidden)bgMusic.pause();else if(audioReady)bgMusic.play().catch(()=>{});}
+    if(document.hidden) stopGameLoop(); else startGameLoop();
+  });
+
+  document.getElementById('profileModal').addEventListener('click',(e)=>{if(e.target===document.getElementById('profileModal'))closeProfile();});
+  document.getElementById('shopModal').addEventListener('click',(e)=>{if(e.target===document.getElementById('shopModal'))closeShop();});
+  document.getElementById('changePwModal').addEventListener('click',(e)=>{if(e.target===document.getElementById('changePwModal'))closeChangePwModal();});
+  document.getElementById('termsModal').addEventListener('click',(e)=>{if(e.target===document.getElementById('termsModal'))closeTermsModal();});
+
+  document.getElementById('authPass').addEventListener('input',updateStrength);
+  document.getElementById('authUser').addEventListener('keydown',(e)=>{if(e.key==='Enter')document.getElementById('authPass').focus();});
+  document.getElementById('authPass').addEventListener('keydown',(e)=>{if(e.key==='Enter'){if(authMode==='register')document.getElementById('authConfirm').focus();else handleAuth();}});
+  document.getElementById('authConfirm').addEventListener('keydown',(e)=>{if(e.key==='Enter')handleAuth();});
+  document.getElementById('cpw-old').addEventListener('keydown',(e)=>{if(e.key==='Enter')document.getElementById('cpw-new').focus();});
+  document.getElementById('cpw-new').addEventListener('keydown',(e)=>{if(e.key==='Enter')document.getElementById('cpw-confirm').focus();});
+  document.getElementById('cpw-confirm').addEventListener('keydown',(e)=>{if(e.key==='Enter')submitChangePw();});
+
+  toggleScreenAnimations('menuScreen');
+  startGameLoop();
+  registerServiceWorker();
+}
+
+function registerServiceWorker(){
+  if(!('serviceWorker' in navigator)) return;
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/sw.js').catch(err=>{
+      console.warn('Service Worker đăng ký thất bại (không ảnh hưởng gameplay):',err);
+    });
+  });
+}
+</script>
+</body>
+</html>
